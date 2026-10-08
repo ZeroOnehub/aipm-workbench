@@ -15,6 +15,9 @@
  */
 export const DEFAULT_WORKSPACE_DIRECTORY = 'default-workspace'
 
+/** AIPM 工坊 first-use Workspace directory under `<Documents>`; it also holds every project folder. */
+export const AIPM_WORKSPACE_DIRECTORY = 'AIPM工坊'
+
 /**
  * The text one Workspace is labeled with. A Workspace still carrying the
  * automatic first-use title reads as the caller's localized default name; every

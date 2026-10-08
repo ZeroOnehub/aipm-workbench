@@ -330,6 +330,11 @@
     # Official occupants for the generic sidebar and conversation brand slots.
     - id: ui-brand-official
       name: '@deepseek-ai/dsh-client-ui-brand-official'
+      disabled: true
+
+    # AIPM 工坊: studio brand occupants and the right-Sidebar project tab.
+    - id: aipm-workbench
+      name: '@deepseek-ai/dsh-client-aipm-workbench'
 
     - id: ui-attachment
       name: '@deepseek-ai/dsh-client-ui-attachment'
@@ -580,4 +585,4 @@
     - id: agent-preset-registry
       name: '@deepseek-ai/dsh-agent-preset-registry'
       config:
-        default: standard
+        default: aipm

@@ -31,6 +31,7 @@
     "lib/index.js",
     "lib/startup.js",
     "cordis.patch.yml",
+    "presets/aipm.patch.yml",
     "presets/standard.patch.yml",
     "presets/ptc.patch.yml",
     "presets/minimal.patch.yml",
@@ -43,6 +44,7 @@
     "bundle": {
       "patch": [
         "./cordis.patch.yml",
+        "./presets/aipm.patch.yml",
         "./presets/standard.patch.yml",
         "./presets/ptc.patch.yml",
         "./presets/minimal.patch.yml",
@@ -72,6 +74,7 @@
     "@deepseek-ai/dsh-client-ui-agent-preset": "workspace:*",
     "@deepseek-ai/dsh-client-ui-approval": "workspace:*",
     "@deepseek-ai/dsh-client-ui-attachment": "workspace:*",
+    "@deepseek-ai/dsh-client-aipm-workbench": "workspace:*",
     "@deepseek-ai/dsh-client-ui-brand-official": "workspace:*",
     "@deepseek-ai/dsh-client-ui-chat": "workspace:*",
     "@deepseek-ai/dsh-client-ui-commands": "workspace:*",

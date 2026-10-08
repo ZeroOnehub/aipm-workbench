@@ -3,7 +3,7 @@
 import { homedir } from 'node:os'
 import { posix, win32 } from 'node:path'
 import { runNativeCommand, type NativeCommandRunner } from '@deepseek-ai/dsh-native-command'
-import { DEFAULT_WORKSPACE_DIRECTORY } from './default-workspace.ts'
+import { AIPM_WORKSPACE_DIRECTORY } from './default-workspace.ts'
 
 /** Platform observations replaceable in directory-resolution tests. */
 interface DocumentsDirectoryInternals {
@@ -74,5 +74,6 @@ export async function defaultWorkspaceDirectory(
   }
   directory = validateDocumentsDirectory(directory, platform)
   signal.throwIfAborted()
-  return paths.join(directory, 'deepseek-harness', DEFAULT_WORKSPACE_DIRECTORY)
+  // AIPM 工坊: first-use Workspace is the studio root that holds every project folder.
+  return paths.join(directory, AIPM_WORKSPACE_DIRECTORY)
 }
