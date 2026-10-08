@@ -27,6 +27,12 @@ export const RIGHTBAR_MIN = 300
 export const RIGHTBAR_MAX_RATIO = 0.7
 /** First-open right panel preference as a fraction of the frame. */
 export const RIGHTBAR_DEFAULT_RATIO = 0.45
+/**
+ * AIPM 工坊 places the file panel (the right-Sidebar column) between the
+ * sidebar and the conversation, so the conversation sits at the window's
+ * right edge. `'end'` restores the upstream order.
+ */
+export const RIGHTBAR_PLACEMENT: 'center' | 'end' = 'center'
 
 /**
  * Clamp a panel width into its contract range.

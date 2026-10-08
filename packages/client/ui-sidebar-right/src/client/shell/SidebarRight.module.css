@@ -101,6 +101,28 @@
   --dsh-dockkit-strip-inline-start: 10px;
 }
 
+/* AIPM 工坊 centre placement (ui-layout data-rightbar-placement): the panel sits
+   between the sidebar and the conversation, so hidden Grid items slide off to
+   the left, beneath the sidebar column, instead of across the conversation. */
+:global([data-rightbar-placement='center']) .panel :global([data-dockkit-host='dock']),
+:global([data-rightbar-placement='center']) .panel :global([data-dockkit-empty]),
+:global([data-rightbar-placement='center']) .panel :global([data-dockkit-divider]) {
+  transform: translateX(calc(-1 * var(--dsh-sidebar-width)));
+}
+
+:global([data-rightbar-placement='center']) .panel[data-sidebar-right-open] :global([data-dockkit-host='dock']),
+:global([data-rightbar-placement='center']) .panel[data-sidebar-right-open] :global([data-dockkit-empty]),
+:global([data-rightbar-placement='center']) .panel[data-sidebar-right-open] :global([data-dockkit-divider]) {
+  transform: none;
+}
+
+/* macOS with the sidebar hidden: the centred panel reaches the window's top-left
+   corner, so its first strip clears the traffic lights and shell.leading
+   controls the same way the conversation header does. */
+:global([data-platform='darwin']) :global([data-rightbar-placement='center'][data-sidebar-collapsed]) .panel :global([data-dockkit-host='dock'][data-dockkit-column='0']) {
+  --dsh-dockkit-strip-inline-start: var(--dsh-frame-leading-clearance, 160px);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .panel :global([data-dockkit-host='dock']),
   .panel :global([data-dockkit-empty]),

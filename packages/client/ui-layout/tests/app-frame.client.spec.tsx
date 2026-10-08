@@ -116,10 +116,11 @@ function mountFrame(windowWidth = frameWidth) {
    specs read the specified tracks): [sidebar px, rightbar growth limit].
    The centre's protected minimum must accompany an open right track. */
 function tracks(frame: HTMLElement): number[] {
-  const match = /^([\d.]+)px minmax\((0|400)px, 1fr\) minmax\(0px, ([\d.]+)px\)$/.exec(frame.style.gridTemplateColumns)
+  // AIPM 工坊 centre placement: [sidebar] [right panel] [conversation].
+  const match = /^([\d.]+)px minmax\(0px, ([\d.]+)px\) minmax\((0|400)px, 1fr\)$/.exec(frame.style.gridTemplateColumns)
   if (match === null) throw new Error(`unexpected template: ${frame.style.gridTemplateColumns}`)
-  const rightbar = Number(match[3])
-  if ((match[2] === '400') !== (rightbar > 0)) throw new Error(`centre minimum out of step: ${frame.style.gridTemplateColumns}`)
+  const rightbar = Number(match[2])
+  if ((match[3] === '400') !== (rightbar > 0)) throw new Error(`centre minimum out of step: ${frame.style.gridTemplateColumns}`)
   return [Number(match[1]), rightbar]
 }
 
@@ -475,7 +476,8 @@ describe('AppFrame right panel presentation', () => {
     const { frame, instance, rightOwner } = mountFrame()
     act(() => { instance.actions.openRightbar(true, false) })
     expect(tracks(frame)).toEqual([280, 864])
-    expect(handleFor(frame, 'rightbar').style.left).toBe('1056px')
+    // Centre placement: the handle sits on the panel's right edge (sidebar + panel).
+    expect(handleFor(frame, 'rightbar').style.left).toBe('1144px')
     act(() => { instance.actions.openRightbar(true, true) })
     expect(tracks(frame)).toEqual([280, 864])
     expect(rightOwner().width).toBe(864)
@@ -483,7 +485,7 @@ describe('AppFrame right panel presentation', () => {
     expect(frame.querySelector('[data-side="rightbar"]')).toBeNull()
     act(() => { instance.actions.openRightbar(true, false) })
     expect(tracks(frame)).toEqual([280, 864])
-    expect(handleFor(frame, 'rightbar').style.left).toBe('1056px')
+    expect(handleFor(frame, 'rightbar').style.left).toBe('1144px')
     expect(frame.dataset.rightbarFullscreen).toBeUndefined()
     act(() => { instance.actions.closeRightbar() })
     expect(tracks(frame)).toEqual([280, 0])
@@ -520,7 +522,7 @@ describe('AppFrame right panel presentation', () => {
     resize(1100)
     expect(tracks(frame)).toEqual([280, 0])
     expect(rightOwner().width).toBe(420)
-    drag(handleFor(frame, 'rightbar'), 680, 690)
+    drag(handleFor(frame, 'rightbar'), 690, 680)
     expect(instance.getSnapshot().layoutInfo.rightbar).toBe(410)
     expect(rightOwner().width).toBe(410)
     expect(tracks(frame)[1]).toBe(0)
@@ -554,8 +556,8 @@ describe('AppFrame pointer resizing', () => {
     const handle = handleFor(frame, 'rightbar')
     expect(rightOwner().width).toBe(420)
     expect(tracks(frame)[1]).toBe(770)
-    expect(handle.style.left).toBe('680px')
-    drag(handle, 680, 690)
+    expect(handle.style.left).toBe('700px')
+    drag(handle, 700, 690)
     expect(instance.getSnapshot().layoutInfo.rightbar).toBe(410)
     expect(rightOwner().width).toBe(410)
     expect(tracks(frame)[1]).toBe(410)
@@ -566,10 +568,10 @@ describe('AppFrame pointer resizing', () => {
     frameWidth = 3000
     const { frame, instance, rightOwner } = mountFrame()
     act(() => { instance.actions.toggleSidebar(); instance.actions.openRightbar(true, false) })
-    drag(handleFor(frame, 'rightbar'), 1650, 0)
+    drag(handleFor(frame, 'rightbar'), 0, 3000)
     expect(rightOwner().width).toBe(2100)
     expect(tracks(frame)[1]).toBe(2100)
-    drag(handleFor(frame, 'rightbar'), 900, 3000)
+    drag(handleFor(frame, 'rightbar'), 3000, 0)
     expect(rightOwner().width).toBe(300)
     expect(tracks(frame)[1]).toBe(300)
   })

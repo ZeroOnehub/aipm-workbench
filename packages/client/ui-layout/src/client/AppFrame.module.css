@@ -288,3 +288,29 @@
 .overlayLayer > * {
   pointer-events: auto;
 }
+
+/* AIPM 工坊 centre placement: the file panel takes the second track and the
+   conversation the third. Explicit grid columns keep DOM order unchanged. The
+   sidebar stacks above the panel (layer 10) so the panel slides out beneath it. */
+.frame[data-rightbar-placement='center'] .sidebarCol {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  z-index: 12;
+}
+
+.frame[data-rightbar-placement='center'] .rightbarCol {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.frame[data-rightbar-placement='center'] .centerCol {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+/* With the file panel open the conversation no longer touches the window's
+   left edge, so it keeps its separator even when the sidebar is collapsed. */
+:global([data-platform='darwin']) .frame[data-rightbar-placement='center'][data-sidebar-collapsed]:not([data-rightbar-collapsed]) .centerCol {
+  border-left: 0.5px solid var(--dsw-alias-border-l3);
+}
