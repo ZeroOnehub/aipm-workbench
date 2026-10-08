@@ -8,7 +8,11 @@
  * relative paths, with the sandbox policy root as its no-cwd fallback, not a
  * read-containment restriction. Directory listings and change observations
  * remain workspace-scoped. File-kind checks and configured read caps apply to
- * every preview; this service exposes no mutations.
+ * every preview.
+ *
+ * AIPM 工坊 adds two workspace-confined mutations for the document editor:
+ * `write` replaces UTF-8 text under a version guard, and `writeAsset` stores a
+ * pasted image beside the document it is embedded in.
  *
  * A page is cut from `streamText`, which decodes and rejects non-UTF-8 as it
  * goes, so the file is read only up to the first character past the page and
@@ -19,11 +23,12 @@
  * file content across the wire, which is a different level of exposure.
  */
 
+import { mkdir, writeFile } from 'node:fs/promises'
 import { posix, win32 } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type {} from '@deepseek-ai/dsh-fs'
-import type { FsDirEntry, FsInfo, FsPathInfo, FsTarget } from '@deepseek-ai/dsh-fs'
+import type { FsDirEntry, FsInfo, FsPathInfo, FsTarget, FsVersion, FsWriteIntent } from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import type {} from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-session-persistence'
@@ -31,6 +36,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { Remote, RemoteError, TypertRemoteService, type TypertLookup } from '@deepseek-ai/dsh-typert-protocol'
 import { WorkspaceChangeFeed } from './changes.ts'
 import type {
+  WorkspaceAssetWrite,
   WorkspaceByteRange,
   WorkspaceByteReadOptions,
   WorkspaceDirectoryEntry,
@@ -40,6 +46,7 @@ import type {
   WorkspaceFileStat,
   WorkspaceFileText,
   WorkspaceFileWatchFrame,
+  WorkspaceFileWriteOptions,
 } from './types.ts'
 
 export type * from './types.ts'
@@ -91,6 +98,15 @@ interface Page {
   readonly lines: number
   readonly eof: boolean
 }
+
+/** The sandbox policy `writeText` accepts, taken from the filesystem seam. */
+type WritePolicy = NonNullable<Parameters<Context['fs']['writeText']>[4]>
+
+/** Image types the editor may store; the extension decides, the name is otherwise free. */
+const ASSET_NAME = /^[^/\\:*?"<>|\u0000-\u001f]{1,120}\.(png|jpe?g|gif|webp)$/iu
+
+/** Directory beside the document that holds its pasted images. */
+const ASSET_DIRECTORY = 'images'
 
 /** The byte text never carries: its presence marks a page as binary. */
 const NUL = String.fromCharCode(0)
@@ -339,6 +355,112 @@ export class WorkspaceFiles extends TypertRemoteService {
   @Remote({ mode: 'stream' })
   changes(workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal): AsyncIterable<WorkspaceFileWatchFrame> {
     return this.feed.follow(workspaceFileScope.workspaceRoot, path, signal)
+  }
+
+  /**
+   * Replace or create one UTF-8 text file inside the Session's workspace.
+   * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+   * @param path - absolute path or path relative to the workspace root; must stay inside the workspace.
+   * @param content - the complete new file content.
+   * @param options - freshness guard; see {@link WorkspaceFileWriteOptions}.
+   * @param signal - caller cancellation.
+   * @returns the written file's absolute path, new version, and size.
+   * @throws RemoteError `workspace-file/stale` when the file moved past the expected version.
+   */
+  @Remote
+  async write(
+    workspaceFileScope: WorkspaceFileScope,
+    path: string,
+    content: string,
+    options: WorkspaceFileWriteOptions,
+    signal: AbortSignal,
+  ): Promise<WorkspaceFileStat> {
+    if (path.length === 0) throw new RemoteError('gateway/bad-request', 'path is required', {})
+    const bytes = Buffer.byteLength(content, 'utf8')
+    if (bytes > this.config.maxFileBytes) {
+      throw new RemoteError('workspace-file/too-large', `"${path}" exceeds the ${this.config.maxFileBytes} byte cap`, { path, limit: this.config.maxFileBytes })
+    }
+    const { workspaceRoot } = workspaceFileScope
+    const root = await this.ctx.fs.resolve(workspaceRoot, { signal })
+    const existing = await this.ctx.fs.lstat(path, { cwd: workspaceRoot }, signal)
+    if (existing !== undefined && existing.type !== 'file') {
+      throw new RemoteError('workspace-file/not-regular-file', `"${path}" is a ${existing.type}`, { path, kind: existing.type })
+    }
+    const target = await this.confine(root, workspaceRoot, path, signal)
+    const expected: FsWriteIntent = options.expectedVersion === undefined
+      ? { kind: 'createIfAbsent' }
+      : { kind: 'replaceIfVersion', version: options.expectedVersion as FsVersion }
+    try {
+      // Fence the write to this Session's workspace, the same policy the agent's write tool runs under.
+      const policy: WritePolicy = { mode: 'workspace-write', workspaceRoot, sessionId: workspaceFileScope.sessionId }
+      await this.ctx.fs.writeText(target, content, expected, signal, policy)
+    } catch (error: unknown) {
+      const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined
+      if (code === 'FS_STALE_VERSION') throw new RemoteError('workspace-file/stale', `"${path}" changed since it was loaded`, { path }, { cause: error })
+      if (code === 'FS_NOT_OBSERVED') throw new RemoteError('workspace-file/exists', `"${path}" already exists`, { path }, { cause: error })
+      throw error
+    }
+    const info = await this.ctx.fs.stat(target, signal)
+    /* v8 ignore next -- the file was written in the same call; a concurrent delete is the only way here. */
+    if (info === undefined) throw new RemoteError('workspace-file/not-found', `no entry at "${path}"`, { path })
+    return this.statOf(target, info)
+  }
+
+  /**
+   * Store an image in the `images/` directory beside a workspace document,
+   * choosing a free name when the requested one is taken.
+   * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+   * @param baseFile - the document the image belongs to; must be a regular file inside the workspace.
+   * @param name - requested file name with an image extension.
+   * @param base64 - the image bytes, base64-encoded.
+   * @param signal - caller cancellation.
+   * @returns the stored path relative to the document's directory, and its absolute path.
+   */
+  @Remote
+  async writeAsset(
+    workspaceFileScope: WorkspaceFileScope,
+    baseFile: string,
+    name: string,
+    base64: string,
+    signal: AbortSignal,
+  ): Promise<WorkspaceAssetWrite> {
+    if (!ASSET_NAME.test(name) || name.startsWith('.')) {
+      throw new RemoteError('workspace-file/bad-asset', `"${name}" is not an accepted image name`, { name })
+    }
+    const data = Buffer.from(base64, 'base64')
+    if (data.length === 0) throw new RemoteError('workspace-file/bad-asset', `"${name}" is empty`, { name })
+    if (data.length > this.config.maxFileBytes) {
+      throw new RemoteError('workspace-file/too-large', `"${name}" exceeds the ${this.config.maxFileBytes} byte cap`, { path: name, limit: this.config.maxFileBytes })
+    }
+    const { root, workspaceRoot } = await this.inspect(workspaceFileScope, baseFile, signal)
+    const { target: document } = await this.locateFile(workspaceFileScope, baseFile, signal)
+    if (!this.ctx.fs.contains(root, document)) {
+      throw new RemoteError('workspace-file/outside-workspace', `"${baseFile}" is outside the workspace`, { path: baseFile })
+    }
+    const absoluteDocument = this.ctx.fs.processPath(document)
+    const paths = absoluteDocument.startsWith('/') ? posix : win32
+    const directory = paths.join(paths.dirname(absoluteDocument), ASSET_DIRECTORY)
+    const dot = name.lastIndexOf('.')
+    const stem = name.slice(0, dot)
+    const extension = name.slice(dot)
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const candidate = attempt === 0 ? name : `${stem}-${attempt}${extension}`
+      const target = await this.ctx.fs.resolve(paths.join(directory, candidate), { cwd: workspaceRoot, signal })
+      if (!this.ctx.fs.contains(root, target)) {
+        throw new RemoteError('workspace-file/outside-workspace', `"${candidate}" is outside the workspace`, { path: candidate })
+      }
+      const absolutePath = this.ctx.fs.processPath(target)
+      await mkdir(paths.dirname(absolutePath), { recursive: true })
+      try {
+        // `wx` refuses an existing file, so concurrent pastes never overwrite each other.
+        await writeFile(absolutePath, data, { flag: 'wx', signal })
+      } catch (error: unknown) {
+        if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'EEXIST') continue
+        throw error
+      }
+      return { relativePath: `${ASSET_DIRECTORY}/${candidate}`, absolutePath }
+    }
+    throw new RemoteError('workspace-file/bad-asset', `no free name for "${name}"`, { name })
   }
 
   private async relativePath(scope: WorkspaceFileScope, baseFile: string, path: string, signal: AbortSignal): Promise<string> {

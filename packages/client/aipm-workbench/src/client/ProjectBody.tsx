@@ -8,7 +8,6 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import clsx from 'clsx'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { FileTypeIcon, IconRefreshOutlineRegular, Tooltip, classifyFileType } from '@deepseek-ai/dsh-client-ui-primitives'
 import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
@@ -168,7 +167,7 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
             const expanded = isOpen(stage)
             const passed = stage.stations.filter(s => s.status === 'passed' || s.status === 'passed_pending').length
             return (
-              <li key={stage.id} className={clsx(css.stage, css[`stage_${stage.status}`])} data-stage={stage.id}>
+              <li key={stage.id} className={`${css.stage} ${css[`stage_${stage.status}`] ?? ''}`} data-stage={stage.id}>
                 <button
                   type="button"
                   className={css.stageHead}
@@ -195,7 +194,7 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
                       <ul className={css.stations} aria-label={t('stations')}>
                         {stage.stations.map(station => (
                           <li key={station.id} className={css.station} title={station.note}>
-                            <span className={clsx(css.dot, css[`dot_${station.status}`])} />
+                            <span className={`${css.dot} ${css[`dot_${station.status}`] ?? ''}`} />
                             <span className={css.stationName}>{station.id} {station.name}</span>
                             <span className={css.stationStatus}>{t(`station.${station.status}`)}</span>
                           </li>

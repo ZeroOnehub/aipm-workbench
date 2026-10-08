@@ -150,8 +150,31 @@ export type WorkspaceFileWatchFrame =
   | { readonly kind: 'ready' }
   | { readonly kind: 'change'; readonly change: WorkspaceFileChange }
 
+/** Freshness guard for {@link WorkspaceFiles.write}. */
+export interface WorkspaceFileWriteOptions {
+  /**
+   * Version the editor loaded. Present: replace only while the file still has
+   * this version. Absent: create a new file and refuse to replace an existing one.
+   */
+  readonly expectedVersion?: string
+}
+
+/** A stored editor asset, addressed relative to the document that embeds it. */
+export interface WorkspaceAssetWrite {
+  /** `/`-separated path from the document's directory, ready for a Markdown link. */
+  readonly relativePath: string
+  /** Absolute path of the stored file. */
+  readonly absolutePath: string
+}
+
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface RemoteErrorDetailsMap {
+    /** The file changed after the editor loaded it; nothing was written. */
+    'workspace-file/stale': { readonly path: string }
+    /** A write without an expected version found a file already there; nothing was written. */
+    'workspace-file/exists': { readonly path: string }
+    /** The asset name, type, or payload is not an accepted image. */
+    'workspace-file/bad-asset': { readonly name: string }
     /** The filesystem provider cannot initialize a watch for this target. */
     'workspace-file/watch-unsupported': { readonly path: string }
     /** No entry exists at that path inside the workspace. */
