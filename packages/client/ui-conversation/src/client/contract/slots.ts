@@ -191,6 +191,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'conversation.hero.brand.mark': { kind: 'single'; scope: 'root'; owner: HeroBrandMarkOwnerProps }
     /** Agent-preset control staged for a New Session. */
     'conversation.hero.agentPreset': { kind: 'single'; scope: 'session-maybe'; owner: HeroAgentPresetOwnerProps }
+    /** AIPM 工坊: optional content below the blank-session Hero composer, such as starter workflows. */
+    'conversation.hero.footer': { kind: 'single'; scope: 'root'; owner: HeroFooterOwnerProps }
     /** Full-width entries above the composer card. */
     'conversation.input.dock': { kind: 'list'; scope: 'session'; owner: InputZone }
     /** Floating entries rendered inside the resident composer card. */
@@ -236,6 +238,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
         'conversation.hero.brand.mark': { kind: 'single'; scope: 'root' }
         'conversation.hero.workspace': { kind: 'single'; scope: 'root' }
         'conversation.hero.agentPreset': { kind: 'single'; scope: 'session-maybe' }
+        'conversation.hero.footer': { kind: 'single'; scope: 'root' }
       }
       inject: ConversationInjected
       locale: 'conversation'
@@ -439,6 +442,14 @@ export interface ComposerChainProps {
   session: SessionSnapshot | undefined
   /** Effective business-owned interaction awaiting the user in this Session. */
   pendingInteraction: SessionPendingInteraction | undefined
+}
+
+/** AIPM 工坊: owner props for content below the blank-session Hero composer. */
+export interface HeroFooterOwnerProps {
+  /** The blank Session the Hero composer writes into; absent before a workspace is picked. */
+  sessionId: SessionId | undefined
+  /** True while the Hero composer refuses input (no workspace yet, or a raised block). */
+  disabled: boolean
 }
 
 /** Presentation props supplied to the blank-session brand mark. */

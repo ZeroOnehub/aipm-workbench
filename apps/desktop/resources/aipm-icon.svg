@@ -1,7 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <rect x="100" y="100" width="824" height="824" rx="185" fill="#151a18"/>
-  <rect x="250" y="360" width="340" height="420" rx="44" fill="#2764f2"/>
-  <rect x="360" y="250" width="340" height="420" rx="44" fill="#fffef9"/>
-  <path d="M440 370h180M440 450h180M440 530h100" stroke="#151a18" stroke-width="40" stroke-linecap="round"/>
-  <path d="M720 560l32 70 70 32-70 32-32 70-32-70-70-32 70-32z" fill="#c8f04b"/>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d2421"/>
+      <stop offset="1" stop-color="#121614"/>
+    </linearGradient>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#tile)"/>
+  <rect x="259.6" y="640.8" width="67.0" height="103.0" rx="28.3" fill="#2764f2"/>
+  <rect x="347.2" y="584.1" width="67.0" height="159.7" rx="28.3" fill="#1f71de"/>
+  <rect x="434.8" y="527.5" width="67.0" height="216.3" rx="28.3" fill="#177eca"/>
+  <rect x="522.3" y="470.8" width="67.0" height="272.9" rx="28.3" fill="#108ab7"/>
+  <rect x="609.9" y="414.1" width="67.0" height="329.6" rx="28.3" fill="#0897a3"/>
+  <rect x="697.4" y="357.5" width="67.0" height="386.2" rx="28.3" fill="#00a48f"/>
+  <path d="M730.9 166.9l24.5 52.8 52.8 24.5 -52.8 24.5 -24.5 52.8 -24.5 -52.8 -52.8 -24.5 52.8 -24.5z" fill="#c8f04b"/>
 </svg>

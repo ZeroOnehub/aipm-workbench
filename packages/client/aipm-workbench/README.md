@@ -13,7 +13,7 @@ The tab reads the Session's workspace. A project is a folder that holds `aipm.js
 
 For the selected project the tab shows the six fixed stages (`01-立项` … `06-上线复盘`), each stage's stations from `aipm.json`, and the regular files in each stage directory. Clicking a file opens it through `openResource`, so the document preview tab renders Markdown and HTML. The tab rereads every 4 seconds while mounted and on the refresh button.
 
-Directory listing is limited to the Session workspace by `dsh-api-workspace-files`, so the workspace must be `~/Documents/AIPM工坊` or a project folder.
+Directory listing is limited to the Session workspace by `dsh-api-workspace-files`, so the workspace must be the studio workspace (the folder that holds the project folders) or a single project folder.
 
 ## Markdown editor tab
 

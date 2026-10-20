@@ -1,6 +1,7 @@
 /**
  * The project tab body: pick a project in the session's workspace, show its
- * six stages with their stations, and list each stage directory's files.
+ * six stages as a pipeline with their stations, owning skills, and each stage
+ * directory's files.
  *
  * Projects are folders holding `aipm.json`. When the workspace root itself
  * holds one, the workspace is that single project. Files open through the tab's
@@ -14,7 +15,7 @@ import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
 import type { WorkspaceDirectoryEntry } from '@deepseek-ai/dsh-api-workspace-files/types'
 import type { ProjectFiles } from './files.ts'
 import { STAGES, isDeliverable, joinPath, parseProject } from './model.ts'
-import type { Project, Stage } from './model.ts'
+import type { Project, Stage, StageDefinition } from './model.ts'
 import type {} from './locales.ts'
 import css from './workbench.module.css'
 
@@ -42,6 +43,20 @@ const byName = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base'
 
 function basename(path: string): string {
   return path.replace(/[/\\]+$/, '').split(/[/\\]/).pop() ?? path
+}
+
+function stageNumber(index: number): string {
+  return String(index + 1).padStart(2, '0')
+}
+
+/** Owning skills as small monospace chips. */
+function SkillChips({ stage }: { readonly stage: StageDefinition }): ReactNode {
+  return (
+    <span className={css.skills}>
+      {stage.skills.slice(0, 2).map(skill => <span key={skill} className={css.skill}>{skill}</span>)}
+      {stage.skills.length > 2 && <span className={css.skillMore}>+{stage.skills.length - 2}</span>}
+    </span>
+  )
 }
 
 /** The project tab body. */
@@ -118,10 +133,24 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
   if (projects === undefined) return <div className={css.status}>{t('loading')}</div>
   if (current === undefined) {
     return (
-      <div className={css.empty}>
-        <p className={css.emptyTitle}>{t('empty.title')}</p>
-        <p>{t('empty.body')}</p>
-        <p className={css.muted}>{t('empty.hint')}</p>
+      <div className={css.root}>
+        <div className={css.empty}>
+          <p className={css.emptyTitle}>{t('empty.title')}</p>
+          <p>{t('empty.body')}</p>
+        </div>
+        <ol className={css.preview} aria-label={t('empty.pipeline')}>
+          {STAGES.map((stage, index) => (
+            <li key={stage.id} className={css.previewItem}>
+              <span className={css.previewNum}>{stageNumber(index)}</span>
+              <span className={css.previewText}>
+                <span className={css.previewName}>{stage.name}</span>
+                <span className={css.previewOutput}>{stage.output}</span>
+              </span>
+              <SkillChips stage={stage} />
+            </li>
+          ))}
+        </ol>
+        <p className={css.emptyHint}>{t('empty.hint')}</p>
       </div>
     )
   }
@@ -129,6 +158,8 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
   const openFile = (path: string): void => { tab.actions.openResource(fileAddressFor(sessionId, cwd, path)) }
   const project = current.project
   const isOpen = (stage: Stage): boolean => open[stage.id] ?? (stage.id === project?.currentStage || (files[stage.id]?.length ?? 0) > 0)
+  const done = project?.stages.filter(stage => stage.status === 'done').length ?? 0
+  const currentStage = project?.stages.find(stage => stage.id === project.currentStage)
 
   return (
     <div className={css.root}>
@@ -151,76 +182,105 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
           </button>
         </Tooltip>
       </div>
-      {project !== undefined && (project.updated !== undefined || project.type !== undefined) && (
-        <div className={css.meta}>
-          {project.type !== undefined && <span>{t('project.type', { type: project.type })}</span>}
-          {project.updated !== undefined && <span>{t('project.updated', { time: project.updated })}</span>}
-        </div>
-      )}
+
       {current.error !== undefined && (
         <div className={css.error}>{t('error.read', { path: joinPath(current.folder, 'aipm.json'), message: current.error })}</div>
       )}
+
       {project !== undefined && (
-        <ol className={css.stages}>
+        <div className={css.summary}>
+          <div className={css.summaryMeta}>
+            {project.type !== undefined && <span className={css.typeChip}>{project.type}</span>}
+            {project.updated !== undefined && <span>{t('project.updated', { time: project.updated })}</span>}
+          </div>
+          <div className={css.pipeline} aria-hidden="true">
+            {project.stages.map(stage => (
+              <span
+                key={stage.id}
+                className={`${css.pipeSeg} ${css[`pipe_${stage.status}`] ?? ''} ${stage.id === project.currentStage ? css.pipeCurrent : ''}`}
+              />
+            ))}
+          </div>
+          <div className={css.summaryText}>
+            <span>{t('summary.done', { done: String(done), total: String(project.stages.length) })}</span>
+            {currentStage !== undefined && <span className={css.summaryCurrent}>{t('summary.current', { stage: currentStage.name })}</span>}
+          </div>
+        </div>
+      )}
+
+      {project !== undefined && (
+        <ol className={css.timeline}>
           {project.stages.map((stage, index) => {
             const stageFiles = files[stage.id] ?? []
             const expanded = isOpen(stage)
             const passed = stage.stations.filter(s => s.status === 'passed' || s.status === 'passed_pending').length
+            const isCurrent = stage.id === project.currentStage
             return (
-              <li key={stage.id} className={`${css.stage} ${css[`stage_${stage.status}`] ?? ''}`} data-stage={stage.id}>
-                <button
-                  type="button"
-                  className={css.stageHead}
-                  aria-expanded={expanded}
-                  title={stage.note ?? (stage.status === 'unavailable' ? t('stage.unavailableHint') : undefined)}
-                  onClick={() => { setOpen(prev => ({ ...prev, [stage.id]: !expanded })) }}
-                >
-                  <span className={css.stageNum}>{String(index + 1).padStart(2, '0')}</span>
-                  <span className={css.stageName}>
-                    {stage.name}
-                    {stage.id === project.currentStage && <span className={css.currentTag}>{t('current')}</span>}
-                  </span>
-                  {stage.stations.length > 0 && <span className={css.count}>{passed}/{stage.stations.length}</span>}
-                  <span className={css.stageStatus}>{t(`stage.${stage.status}`)}</span>
-                </button>
-                {stage.stations.length > 0 && (
-                  <div className={css.bar} aria-hidden="true">
-                    {stage.stations.map(station => <span key={station.id} className={css[`seg_${station.status}`]} />)}
+              <li
+                key={stage.id}
+                className={`${css.stage} ${css[`stage_${stage.status}`] ?? ''} ${isCurrent ? css.stageCurrent : ''}`}
+                data-stage={stage.id}
+              >
+                <div className={css.rail} aria-hidden="true">
+                  <span className={css.node}>{stage.status === 'done' ? '✓' : stageNumber(index)}</span>
+                </div>
+                <div className={css.stageMain}>
+                  <button
+                    type="button"
+                    className={css.stageHead}
+                    aria-expanded={expanded}
+                    title={stage.note ?? (stage.status === 'unavailable' ? t('stage.unavailableHint') : undefined)}
+                    onClick={() => { setOpen(prev => ({ ...prev, [stage.id]: !expanded })) }}
+                  >
+                    <span className={css.stageName}>
+                      {stage.name}
+                      {isCurrent && <span className={css.currentTag}>{t('current')}</span>}
+                    </span>
+                    {stage.stations.length > 0 && <span className={css.count}>{passed}/{stage.stations.length}</span>}
+                    <span className={css.stageStatus}>{t(`stage.${stage.status}`)}</span>
+                  </button>
+                  <div className={css.stageSub}>
+                    <SkillChips stage={stage} />
                   </div>
-                )}
-                {expanded && (
-                  <div className={css.stageBody}>
-                    {stage.stations.length > 0 && (
-                      <ul className={css.stations} aria-label={t('stations')}>
-                        {stage.stations.map(station => (
-                          <li key={station.id} className={css.station} title={station.note}>
-                            <span className={`${css.dot} ${css[`dot_${station.status}`] ?? ''}`} />
-                            <span className={css.stationName}>{station.id} {station.name}</span>
-                            <span className={css.stationStatus}>{t(`station.${station.status}`)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    <div className={css.filesLabel}>{t('deliverables')}</div>
-                    {stageFiles.length === 0
-                      ? <div className={css.muted}>{t('deliverables.none')}</div>
-                      : (
-                        <ul className={css.files}>
-                          {stageFiles.map((entry) => {
-                            const path = joinPath(current.root, stage.dir, entry.name)
-                            return (
-                              <li key={entry.name}>
-                                <button type="button" className={css.file} onClick={() => { openFile(path) }} title={path}>
-                                  <FileTypeIcon kind={classifyFileType(entry.name)} size={16} />
-                                  <span className={css.fileName}>{entry.name}</span>
-                                </button>
-                              </li>
-                            )
-                          })}
+                  {stage.stations.length > 0 && (
+                    <div className={css.bar} aria-hidden="true">
+                      {stage.stations.map(station => <span key={station.id} className={css[`seg_${station.status}`]} />)}
+                    </div>
+                  )}
+                  {expanded && (
+                    <div className={css.stageBody}>
+                      {stage.stations.length > 0 && (
+                        <ul className={css.stations} aria-label={t('stations')}>
+                          {stage.stations.map(station => (
+                            <li key={station.id} className={css.station} title={station.note}>
+                              <span className={`${css.dot} ${css[`dot_${station.status}`] ?? ''}`} />
+                              <span className={css.stationName}>{station.id} {station.name}</span>
+                              <span className={`${css.stationStatus} ${css[`st_${station.status}`] ?? ''}`}>{t(`station.${station.status}`)}</span>
+                            </li>
+                          ))}
                         </ul>
                       )}
-                  </div>
-                )}
+                      <div className={css.filesLabel}>{t('deliverables')}</div>
+                      {stageFiles.length === 0
+                        ? <div className={css.muted}>{t('deliverables.none')}</div>
+                        : (
+                          <ul className={css.files}>
+                            {stageFiles.map((entry) => {
+                              const path = joinPath(current.root, stage.dir, entry.name)
+                              return (
+                                <li key={entry.name}>
+                                  <button type="button" className={css.file} onClick={() => { openFile(path) }} title={path}>
+                                    <FileTypeIcon kind={classifyFileType(entry.name)} size={16} />
+                                    <span className={css.fileName}>{entry.name}</span>
+                                  </button>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        )}
+                    </div>
+                  )}
+                </div>
               </li>
             )
           })}

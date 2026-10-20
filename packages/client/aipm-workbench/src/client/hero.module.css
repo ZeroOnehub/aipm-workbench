@@ -1,0 +1,127 @@
+/* AIPM 工坊 Hero footer: six starter cards under the blank-session composer.
+   Neutral surfaces from the app's alias tokens; one brand accent for the
+   stage numbers so light and dark themes both read. */
+
+.hero {
+  --aipm-accent: var(--dsw-alias-state-business-primary, #2764f2);
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 28px;
+  /* Same side clearance as the Hero input card, so the grid lines up with it. */
+  padding: 0 var(--dsh-composer-side-clearance, 16px);
+}
+
+.head {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  margin: 0 2px 10px;
+}
+
+.kicker {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.hint {
+  overflow: hidden;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 720px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  min-height: 92px;
+  box-sizing: border-box;
+  padding: 11px 12px 10px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-md, 10px);
+  background: var(--dsw-alias-bg-layer-1, transparent);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease, transform 120ms ease;
+}
+
+.card:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--aipm-accent) 55%, transparent);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.card:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--aipm-accent);
+  outline-offset: 1px;
+}
+
+.card:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.top {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  line-height: 20px;
+}
+
+.num {
+  color: var(--aipm-accent);
+  font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.name {
+  font-size: 13.5px;
+  font-weight: 650;
+}
+
+.output {
+  flex: 1 1 auto;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.skill {
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--dsw-alias-bg-layer-2, rgba(127, 127, 127, 0.1));
+  color: var(--dsw-alias-label-tertiary);
+  font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 10.5px;
+  line-height: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

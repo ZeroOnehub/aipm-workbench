@@ -19,16 +19,52 @@ export interface StageDefinition {
   readonly name: string
   /** Directory under the project root holding this stage's deliverables. */
   readonly dir: string
+  /** Skills that do this stage's work, the leading one first. */
+  readonly skills: readonly string[]
+  /** What the stage hands to the next one. */
+  readonly output: string
+  /** Composer text that starts this stage through the studio hub. */
+  readonly starter: string
 }
 
 /** The six stages, in flow order. */
 export const STAGES: readonly StageDefinition[] = [
-  { id: 'initiation', name: '立项', dir: '01-立项' },
-  { id: 'prd', name: 'PRD', dir: '02-PRD' },
-  { id: 'prototype', name: '原型交互', dir: '03-原型交互' },
-  { id: 'ai-design', name: 'AI 方案设计', dir: '04-AI方案设计' },
-  { id: 'evaluation', name: '评测', dir: '05-评测' },
-  { id: 'launch-review', name: '上线复盘', dir: '06-上线复盘' },
+  {
+    id: 'initiation', name: '立项', dir: '01-立项',
+    skills: ['project-initiation', 'interview-script', 'research-synthesis'],
+    output: '立项报告：做不做、先做多小',
+    starter: '/aipm-hub 新建项目。我想做的产品是：',
+  },
+  {
+    id: 'prd', name: 'PRD', dir: '02-PRD',
+    skills: ['prd', 'prd-review'],
+    output: 'PRD：功能、验收标准、AI 能力边界',
+    starter: '/aipm-hub 继续项目，进入 PRD 阶段',
+  },
+  {
+    id: 'prototype', name: '原型交互', dir: '03-原型交互',
+    skills: ['html-wireframe', 'html-prototype'],
+    output: '线框图和可交互原型',
+    starter: '/aipm-hub 继续项目，进入原型交互阶段',
+  },
+  {
+    id: 'ai-design', name: 'AI 方案设计', dir: '04-AI方案设计',
+    skills: ['system-prompt-design', 'harness-patterns'],
+    output: '系统提示词和 Agent 方案',
+    starter: '/aipm-hub 继续项目，进入 AI 方案设计阶段',
+  },
+  {
+    id: 'evaluation', name: '评测', dir: '05-评测',
+    skills: ['eval-error-analysis', 'eval-judge-prompt', 'eval-validate-judge'],
+    output: '错误分析、评委和校准结果',
+    starter: '/aipm-hub 继续项目，进入评测阶段',
+  },
+  {
+    id: 'launch-review', name: '上线复盘', dir: '06-上线复盘',
+    skills: ['metrics-review', 'retro'],
+    output: '指标复盘和复盘结论',
+    starter: '/aipm-hub 继续项目，进入上线复盘阶段',
+  },
 ]
 
 /** One station row. */

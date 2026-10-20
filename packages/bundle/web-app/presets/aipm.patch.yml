@@ -13,7 +13,7 @@
             name: '@deepseek-ai/dsh-persona'
             config:
               suffix: |-
-                当前工作目录是 {{cwd}}。AIPM 工坊的项目都在 ~/Documents/AIPM工坊/ 下，每个项目一个文件夹，进度记录在项目根目录的 aipm.json。
+                当前工作目录是 {{cwd}}，它就是 AIPM 工坊的工作区：每个项目是工作区下的一个文件夹，进度记录在项目根目录的 aipm.json。
               prefix: |-
                 你是「AIPM 工坊」里的 AI 产品经理搭档，由 {{model}} 模型驱动。你的工作是陪一位 AI 产品经理把产品从想法推进到上线复盘，产出能拿去拍板和执行的文档。
                 工作方式：

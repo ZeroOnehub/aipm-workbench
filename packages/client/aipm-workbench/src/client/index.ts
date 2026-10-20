@@ -15,9 +15,12 @@ import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import { fileMediaUrl, parseFileAddress, pathPartsOf } from '@deepseek-ai/dsh-util-workspace-path'
 import { AipmMark, AipmName } from './Brand.tsx'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { MarkdownEditorInjected } from './editor/face.ts'
 import { MarkdownEditorBody } from './editor/MarkdownEditorBody.tsx'
 import { projectFiles } from './files.ts'
+import { HeroStages } from './HeroStages.tsx'
+import type { HeroInjected, StarterResult } from './HeroStages.tsx'
 import { en, zh } from './locales.ts'
 import { ProjectBody } from './ProjectBody.tsx'
 import { ProjectTitle } from './ProjectTitle.tsx'
@@ -82,6 +85,26 @@ export function apply(ctx: ClientContext): void {
 
   const remote = ctx.remote
   const sessions = ctx.sessions
+
+  /** Append `text` to a Session's composer draft and focus it. */
+  const writeComposer = (sessionId: SessionId, text: string): StarterResult => {
+    const actx = sessions.scope(sessionId)
+    const input = actx?.get('conversation')?.input.for(actx)
+    if (input === undefined) return 'unavailable'
+    const state = input.state.getSnapshot()
+    if (state.phase !== 'plain') return 'busy'
+    input.setDraft(state.draft.trim() === '' ? text : `${state.draft.replace(/\s+$/, '')}\n${text}`)
+    input.focus()
+    return 'sent'
+  }
+
+  // The blank-session Hero shows the six stages as starter cards under the composer.
+  const hero: HeroInjected = { start: writeComposer }
+  ctx.effect(() => ctx.slots.inject('conversation.hero.footer', () => ctx.slots.register(
+    { name: 'conversation.hero.footer', locale: NS, inject: () => hero },
+    HeroStages,
+  )), 'aipm-workbench: hero stages')
+
   const editor: MarkdownEditorInjected = {
     load: async (sessionId, path, signal) => {
       const first = await remote.workspaceFiles.read(sessionId, path, {}, signal)
@@ -95,16 +118,7 @@ export function apply(ctx: ClientContext): void {
     save: (sessionId, path, content, expectedVersion, signal) =>
       remote.workspaceFiles.write(sessionId, path, content, { expectedVersion }, signal),
     saveImage: (sessionId, path, name, base64, signal) => remote.workspaceFiles.writeAsset(sessionId, path, name, base64, signal),
-    sendToAgent: (sessionId, text) => {
-      const actx = sessions.scope(sessionId)
-      const input = actx?.get('conversation')?.input.for(actx)
-      if (input === undefined) return 'unavailable'
-      const state = input.state.getSnapshot()
-      if (state.phase !== 'plain') return 'busy'
-      input.setDraft(state.draft.trim() === '' ? text : `${state.draft.replace(/\s+$/, '')}\n${text}`)
-      input.focus()
-      return 'sent'
-    },
+    sendToAgent: writeComposer,
     mediaUrl: absolutePath => fileMediaUrl(document.baseURI, absolutePath),
   }
   ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register(
