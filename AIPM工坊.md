@@ -21,16 +21,16 @@
 | 东西 | 位置 |
 |---|---|
 | 项目和产出物 | `~/Documents/project/AI Workbench/workspace/<项目名>/`，每个阶段一个子文件夹，进度在 `aipm.json` |
-| 流程 skill（总控、立项） | `~/Documents/project/AI Workbench/aipm-skills/`（GitHub 仓库 aipm-skills） |
-| 工具 skill（PRD、原型、评测等 17 个） | `~/Documents/project/AIPM Skill Pack/`（GitHub 仓库 aipm-skill-pack），通过 `workspace/.dsh/skills` 链接接入 |
+| 全部 skill（总控、立项 + PRD、原型、评测等 17 个工具 skill） | `~/Documents/project/AIPM Skill Pack/skills/`（GitHub 仓库 aipm-skill-pack），通过 `workspace/.dsh/skills` 链接接入 |
+| 本地个人 skill（课堂笔记、写作，不上传） | `~/Documents/project/AI Workbench/aipm-skills/`（只在本机） |
 | 工坊源码 | `~/Documents/project/AI Workbench/aipm-workbench/`（GitHub 仓库 aipm-workbench，`main` 分支） |
 | 工坊数据（会话、设置、密钥） | `~/.aipm-studio/`，和官方 DeepSeek Harness 的 `~/.dsh/` 分开 |
 
-`~/.aipm-studio/skills` 和 `~/.dsh/skills` 都是指向 `aipm-skills/` 的链接，在 `aipm-skills/` 里改或新建 skill 都会马上生效，不用重启。Skill Pack 里加的新 skill 也一样。
+在 Skill Pack 里改或新建 skill 会马上生效，不用重启。`~/.aipm-studio/skills` 和 `~/.dsh/skills` 指向本地的 `aipm-skills/`，那里只放不上传的个人 skill（课堂笔记、写作）。总控和立项只在工作区的 `.dsh/skills` 里，换了工作区要重新运行 Skill Pack 的 `install.sh --workspace`。
 
 ## 加新 skill
 
-流程类的放进 `aipm-skills/`，通用工具类的放进 `AIPM Skill Pack/skills/`。新建一个文件夹（比如 `prd/`），写好 `SKILL.md` 就能用，名字只能用小写字母、数字和连字符，并且和文件夹同名。详见两个仓库的 README。
+要公开的放进 `AIPM Skill Pack/skills/`，只自己用、不上传的放进 `aipm-skills/`。新建一个文件夹（比如 `prd/`），写好 `SKILL.md` 就能用，名字只能用小写字母、数字和连字符，并且和文件夹同名。详见 Skill Pack 的 README。
 
 ## 改了工坊源码之后
 

@@ -33,7 +33,7 @@
 | 05 评测 | `eval-synthetic-data` → `eval-error-analysis` → `eval-judge-prompt` → `eval-validate-judge` | 测试集、错误分析、校准过的评委 |
 | 06 上线复盘 | `metrics-review` → `retro` | 指标复盘、复盘结论（对照立项时的预测） |
 
-流程 Skill 在 [aipm-skills](https://github.com/ZeroOnehub/aipm-skills)，17 个工具 Skill 在 [AIPM Skill Pack](https://github.com/ZeroOnehub/aipm-skill-pack)。
+全部 19 个 Skill（总控、立项和 17 个工具 Skill）都在 [AIPM Skill Pack](https://github.com/ZeroOnehub/aipm-skill-pack)。
 
 ![项目面板：六阶段时间线](docs/aipm/screenshots/project.png)
 
@@ -64,9 +64,9 @@ flowchart LR
     Loop --> LLM[DeepSeek 模型]
   end
 
-  subgraph Skills[Skills]
-    Flow[aipm-skills<br/>总控 + 立项]
-    Pack[AIPM Skill Pack<br/>17 个工具 Skill]
+  subgraph Skills[AIPM Skill Pack · 19 个 Skill]
+    Flow[流程 Skill<br/>总控 + 立项]
+    Pack[工具 Skill<br/>17 个]
   end
 
   UI --> Client
@@ -116,9 +116,6 @@ pnpm run start:desktop
 装上 Skill：
 
 ```bash
-git clone https://github.com/ZeroOnehub/aipm-skills.git
-ln -sfn "$PWD/aipm-skills" ~/.aipm-studio/skills
-
 git clone https://github.com/ZeroOnehub/aipm-skill-pack.git
 aipm-skill-pack/install.sh --workspace "<你的工作区>"
 ```
