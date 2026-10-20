@@ -27,8 +27,8 @@ function quote(value: string): string { return `'${value.replaceAll("'", "'\\''"
  */
 export function prepareDevelopmentApp(options: DevelopmentAppOptions): string {
   const source = dirname(dirname(dirname(options.electron)))
-  // AIPM 工坊: the local app bundle carries the studio name and icon.
-  const bundle = join(options.directory, 'AIPM 工坊.app')
+  // Shijie: the local app bundle carries the studio name and icon.
+  const bundle = join(options.directory, '拾阶.app')
   const executable = join(bundle, 'Contents', 'MacOS', 'AIPMStudio')
   const icon = join(options.appRoot, 'resources', 'aipm.icns')
   const stamp = join(bundle, 'Contents', 'Resources', 'dsh-development.json')
@@ -43,10 +43,10 @@ export function prepareDevelopmentApp(options: DevelopmentAppOptions): string {
     const plist = join(bundle, 'Contents', 'Info.plist')
     const values = {
       CFBundleIdentifier: `local.aipm.studio.${createHash('sha256').update(options.appRoot).digest('hex').slice(0, 12)}`,
-      CFBundleName: 'AIPM 工坊',
-      CFBundleDisplayName: 'AIPM 工坊',
+      CFBundleName: '拾阶',
+      CFBundleDisplayName: '拾阶',
       CFBundleExecutable: 'AIPMStudio',
-      CFBundleURLTypes: [{ CFBundleURLName: 'AIPM 工坊', CFBundleURLSchemes: ['dsh'], CFBundleTypeRole: 'Viewer' }],
+      CFBundleURLTypes: [{ CFBundleURLName: '拾阶', CFBundleURLSchemes: ['dsh'], CFBundleTypeRole: 'Viewer' }],
     }
     for (const [key, value] of Object.entries(values)) {
       execFileSync('/usr/bin/plutil', ['-replace', key, '-json', JSON.stringify(value), plist])
@@ -70,7 +70,7 @@ export function developmentLauncher(options: DevelopmentAppOptions, bundle: stri
   const environment = {
     DSH_HOME: options.home,
     DSH_DESKTOP_DEV_APP: '1',
-    // AIPM 工坊: a Launch Services cold start has no dev.ts parent to supply the runtime directory.
+    // Shijie: a Launch Services cold start has no dev.ts parent to supply the runtime directory.
     DSH_DESKTOP_PRIMARY_RUNTIME_DIR: developmentRuntimeDirectory(),
     DSH_DESKTOP_HOST_INSPECT_PORT: String(options.hostPort),
     DSH_DESKTOP_OPEN_DEVTOOLS: options.openDevtools,

@@ -80,7 +80,7 @@ body {
   display: grid;
   flex: 1;
   min-height: 0;
-  grid-template-rows: 40px minmax(0, 1fr) 104px;
+  grid-template-rows: 64px minmax(0, 1fr) 104px;
   justify-items: center;
   align-items: center;
   padding: 24px 48px 76px;
@@ -96,8 +96,9 @@ body {
 .brand {
   display: block;
   flex: none;
-  width: 100%;
-  height: 40px;
+  width: 64px;
+  height: 64px;
+  justify-self: center;
   user-select: none;
   -webkit-user-drag: none;
 }

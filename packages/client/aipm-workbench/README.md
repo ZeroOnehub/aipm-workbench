@@ -1,11 +1,13 @@
 ---
-description: "AIPM 工坊 brand occupants and the right-Sidebar project tab that shows a project's six stages, checkpoints, and deliverables."
+description: "Shijie brand occupants and the right-Sidebar project tab that shows a project's six stages, checkpoints, and deliverables."
 kind: "package-reference"
 ---
 
 # @deepseek-ai/dsh-client-aipm-workbench
 
-Client plugin for the AIPM 工坊 build. It fills the sidebar and conversation-hero brand slots with the studio mark and name, and registers the `aipm-project` right-Sidebar tab type.
+Client plugin for 拾阶 (Shijie), the AI product workbench. It fills the sidebar and conversation-hero brand slots with the studio mark and name, and registers the `aipm-project` right-Sidebar tab type.
+
+The sidebar and hero share a bundled 256 px PNG derived from the desktop icon. Run `apps/desktop/scripts/set-aipm-icon.sh <logo.png> --no-mask` from the repository root for artwork with transparent rounded corners, then rebuild. The script updates the desktop PNG and ICNS, `src/client/brand-image.ts`, the welcome-page PNG, and both web favicons together. Internal package, preset, skill, and storage identifiers retain the `aipm` prefix so existing projects and sessions remain compatible.
 
 ## Project tab
 

@@ -31,7 +31,7 @@ export const zh = {
   'collapse': '收起',
   'expand': '展开',
   'back': '返回',
-  'brand.localBuild': 'AIPM 工坊',
+  'brand.localBuild': '拾阶',
   'workspace.defaultName': '默认工作区',
   'unknown': '未知',
   'none': '无',

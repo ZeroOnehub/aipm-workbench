@@ -1,13 +1,13 @@
-# AIPM 工坊使用说明
+# 拾阶使用说明
 
 ## 打开
 
-双击 `~/Applications/AIPM 工坊.app`（访达 → 前往 → 个人 → 应用程序）。也可以把它拖到程序坞。
+双击 `~/Applications/拾阶.app`（访达 → 前往 → 个人 → 应用程序）。也可以把它拖到程序坞。
 
 第一次打开要做两件事：
 
 1. 在「设置」里填 DeepSeek API Key，或者登录 DeepSeek 账号。
-2. 确认左侧工作区是「AIPM 工坊」（对应 `~/Documents/project/AI Workbench/workspace`）。右侧「项目」面板只读当前工作区里的项目。
+2. 确认左侧工作区是「拾阶」（对应 `~/Documents/project/AI Workbench/workspace`）。右侧「项目」面板只读当前工作区里的项目。
 
 ## 用法
 
@@ -48,7 +48,7 @@ cd "$HOME/Documents/project/AI Workbench/aipm-workbench" && export PATH="$HOME/.
 apps/desktop/scripts/set-aipm-icon.sh ~/Downloads/logo.png
 ```
 
-脚本会把图片放进 macOS 图标的标准安全区并裁成圆角，生成 `apps/desktop/resources/aipm.icns`。下次启动时 App 会带上新图标；程序坞图标没变的话，运行 `killall Dock`。Logo 提示词见 `~/Documents/project/AI Workbench/Logo提示词.md`。
+脚本会生成桌面图标 `apps/desktop/resources/aipm.icns`、PNG，以及应用内首页和侧栏使用的标志。已经带透明圆角的图片加 `--no-mask`，然后重新构建。下次启动时 App 会带上新图标；程序坞图标没变的话，运行 `killall Dock`。Logo 提示词见 `~/Documents/project/AI Workbench/Logo提示词.md`。
 
 ## 已知限制
 

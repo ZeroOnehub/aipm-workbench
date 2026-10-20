@@ -1,11 +1,11 @@
-# AIPM 工坊 preset: the standard preset's plugin set with an AI product-manager
+# 拾阶 preset: the standard preset's plugin set with an AI product-manager
 # persona. It is the registry default in the AIPM build (see cordis.patch.yml).
 - insert:
     - id: preset-aipm
       name: '@deepseek-ai/dsh-agent-preset'
       config:
         id: aipm
-        name: AIPM 工坊
+        name: 拾阶
         description: AI 产品经理工作台：用你的 skill 串起立项到上线复盘的全流程产出物。
         order: 0
         plugins:
@@ -13,9 +13,9 @@
             name: '@deepseek-ai/dsh-persona'
             config:
               suffix: |-
-                当前工作目录是 {{cwd}}，它就是 AIPM 工坊的工作区：每个项目是工作区下的一个文件夹，进度记录在项目根目录的 aipm.json。
+                当前工作目录是 {{cwd}}，它就是 拾阶的工作区：每个项目是工作区下的一个文件夹，进度记录在项目根目录的 aipm.json。
               prefix: |-
-                你是「AIPM 工坊」里的 AI 产品经理搭档，由 {{model}} 模型驱动。你的工作是陪一位 AI 产品经理把产品从想法推进到上线复盘，产出能拿去拍板和执行的文档。
+                你是「拾阶」里的 AI 产品经理搭档，由 {{model}} 模型驱动。你的工作是陪一位 AI 产品经理把产品从想法推进到上线复盘，产出能拿去拍板和执行的文档。
                 工作方式：
                 - 用户开始或继续一个项目时，先加载 aipm-hub skill，由它定位项目、汇报进度，再交给对应阶段的 skill；进入某个阶段后严格按那个 skill 的流程、关卡和模板走。
                 - 用中文，短句，大白话。先给你的判断，再提问；需要用户决定的事用 ask_user_question 提问，一次不超过 3 个，推荐项放第一个。

@@ -1,6 +1,6 @@
 {
-  "name": "DeepSeek Harness",
-  "short_name": "DSH",
+  "name": "拾阶",
+  "short_name": "拾阶",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",

@@ -5,15 +5,15 @@ import type {} from '@deepseek-ai/dsh-client-ui-slots'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
-    /** AIPM 工坊 brand name, project tab chrome, and status labels. */
+    /** Shijie brand name, project tab chrome, and status labels. */
     aipmWorkbench: AipmWorkbenchKey
   }
 }
 
 /** Simplified Chinese dictionary and key-set source of truth. */
 export const zh = {
-  'brand.name': 'AIPM 工坊',
-  'brand.sub': 'AI 产品经理工作台',
+  'brand.name': '拾阶',
+  'brand.sub': 'AI 产品工作台',
   'hero.label': '六个阶段',
   'hero.kicker': '从这里开始',
   'hero.hint': '点一张卡片，把这个阶段的开场指令放进输入框',
@@ -82,8 +82,8 @@ export type AipmWorkbenchKey = keyof typeof zh
 
 /** English dictionary. */
 export const en = {
-  'brand.name': 'AIPM Studio',
-  'brand.sub': 'AI PM workbench',
+  'brand.name': 'Shijie',
+  'brand.sub': 'AI product workbench',
   'hero.label': 'Six stages',
   'hero.kicker': 'Start here',
   'hero.hint': 'Click a card to put that stage\'s starter into the composer',

@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="apps/desktop/resources/aipm-icon.png" width="96" alt="AIPM 工坊" />
+  <img src="apps/desktop/resources/aipm-icon.png" width="96" alt="拾阶" />
 </p>
 
-<h1 align="center">AIPM 工坊</h1>
+<h1 align="center">拾阶</h1>
 
-<p align="center"><b>AI 产品经理的桌面工作台：从一句话想法，一站一站走到上线复盘。</b></p>
+<p align="center"><b>AI 产品工作台 · 一步步把想法做成产品</b></p>
 
 <p align="center">
   基于 DeepSeek 开源的 Agent 框架 <a href="https://github.com/deepseek-ai/deepseek-harness">DeepSeek Harness</a> 二次开发 · 默认使用 DeepSeek 模型 · macOS 桌面端
@@ -16,7 +16,7 @@
 
 通用的 AI 对话也能写 PRD，但它不知道产品经理的工作是怎么一步步推进的：哪一步该拍板、结论要有什么证据、上一步的产出怎么交给下一步。结果往往是一份看起来完整、其实经不起追问的文档。
 
-AIPM 工坊把这些固化下来：
+拾阶把这些固化下来：
 
 - **流程**：立项 → PRD → 原型交互 → AI 方案设计 → 评测 → 上线复盘，六个阶段，每个阶段由专门的 Skill 带着走，有关卡、有模板、有自检。
 - **证据纪律**：每个结论标来源（用户原话、行为数据、公开资料、测算、AI 推断……），没证据的标「待验证」，不编造。
@@ -43,7 +43,7 @@ AIPM 工坊把这些固化下来：
 - **项目面板**：总进度条 + 六阶段时间线，每个阶段显示负责的 Skill、各站关卡状态和产出物，点文件直接打开。
 - **Markdown 所见即所得编辑**：产出物直接在工坊里改，粘贴截图自动存到文档旁边，⌘S 保存；选中一段文字「发给 AI」继续讨论；AI 和你同时改了同一个文件时会提示冲突，不会互相覆盖。
 - **文档在中间、对话在右边**：边看产出物边和 AI 讨论。
-- **AIPM 人设预设**：中文、短句、先给判断再提问，事实和数字必须能追到来源。
+- **拾阶人设预设**：中文、短句、先给判断再提问，事实和数字必须能追到来源。
 - **独立的桌面 App**：自己的名称、图标和数据目录（`~/.aipm-studio`），和官方 DeepSeek Harness 互不干扰。
 
 ## 架构
@@ -52,9 +52,9 @@ AIPM 工坊把这些固化下来：
 flowchart LR
   PM[产品经理] --> UI[桌面 App]
 
-  subgraph AIPM[AIPM 工坊的定制]
+  subgraph AIPM[拾阶的定制]
     Client[客户端插件 aipm-workbench<br/>首页卡片 · 项目面板 · Markdown 编辑器]
-    Preset[AIPM 预设<br/>人设 + 插件组合]
+    Preset[拾阶预设<br/>人设 + 插件组合]
     Files[workspace-files 扩展<br/>按版本写入 · 图片资源]
   end
 
@@ -87,7 +87,7 @@ DeepSeek Harness 的「一切皆插件」架构让定制不需要改核心：工
 | 位置 | 内容 |
 |---|---|
 | `packages/client/aipm-workbench/` | 客户端插件：品牌、首页六阶段卡片、项目面板、Markdown 编辑器 |
-| `packages/bundle/web-app/presets/aipm.patch.yml` | AIPM 预设：人设与插件组合 |
+| `packages/bundle/web-app/presets/aipm.patch.yml` | 拾阶预设：人设与插件组合 |
 | `packages/api/workspace-files/` | 新增按版本校验的文本写入和图片资源写入，供编辑器使用 |
 | `packages/client/ui-conversation/` | 新增首页底部插槽 `conversation.hero.footer`；首页文案 |
 | `packages/client/ui-layout/` | 文件面板居中、对话在右的布局 |
@@ -123,7 +123,9 @@ git clone https://github.com/ZeroOnehub/aipm-skill-pack.git
 aipm-skill-pack/install.sh --workspace "<你的工作区>"
 ```
 
-换 App 图标：`apps/desktop/scripts/set-aipm-icon.sh <logo.png>`，下次启动生效。
+品牌图片采用「拾阶」阶梯 Logo，呼应从想法到产品的六个阶段。名称和界面已更新，原有数据目录、项目格式和 `/aipm-hub` 指令继续兼容。
+
+换 App 图标：`apps/desktop/scripts/set-aipm-icon.sh <logo.png>`；带透明圆角的成品图加 `--no-mask`。脚本同步生成桌面图标、欢迎页、首页与侧栏标志、网页图标，重新构建并启动后生效。
 
 ## 与上游同步
 
