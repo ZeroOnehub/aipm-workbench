@@ -1,43 +1,55 @@
 /**
- * The project tab body: pick a project in the session's workspace, show its
- * six stages as a pipeline with their stations, owning skills, and each stage
- * directory's files.
+ * The project tab body: pick a project in the session's workspace, list what is
+ * open for the user, and show its six stages as a pipeline with their stations,
+ * owning skills, and each stage directory's files.
  *
  * Projects are folders holding `aipm.json`. When the workspace root itself
  * holds one, the workspace is that single project. Files open through the tab's
- * `openResource` so the document preview tab renders Markdown and HTML.
+ * `openResource` so the document preview tab renders Markdown and HTML. Each
+ * Markdown deliverable is read once per size change to count its evidence tags.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { FileTypeIcon, IconRefreshOutlineRegular, Tooltip, classifyFileType } from '@deepseek-ai/dsh-client-ui-primitives'
 import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
 import type { WorkspaceDirectoryEntry } from '@deepseek-ai/dsh-api-workspace-files/types'
-import type { ProjectFiles } from './files.ts'
-import { STAGES, isDeliverable, joinPath, parseProject } from './model.ts'
-import type { Project, Stage, StageDefinition } from './model.ts'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { countEvidence } from './evidence.ts'
+import type { EvidenceCounts } from './evidence.ts'
+import { EvidenceBar } from './EvidenceBar.tsx'
+import { discoverProjects } from './files.ts'
+import type { FoundProject, ProjectFiles } from './files.ts'
+import type { StarterResult } from './HeroStages.tsx'
+import { PENDING_GROUPS, STAGES, isDeliverable, joinPath, openItems, pendingGroupOf } from './model.ts'
+import type { PendingGroup, PendingItem, Stage, StageDefinition } from './model.ts'
 import type {} from './locales.ts'
 import css from './workbench.module.css'
+
+/** Composer access the tab uses to hand an open item to the agent. */
+export interface ProjectActions {
+  /** Put `text` into the Session's composer draft and focus it. */
+  readonly ask: (sessionId: SessionId, text: string) => StarterResult
+}
 
 /** The body's composed props. */
 export type ProjectBodyProps =
   & PropsRuntime<'sidebar.right.pane.tab'>
   & ProjectFiles
+  & ProjectActions
   & PropsLocale<'aipmWorkbench'>
 
 /** Reread interval while the tab is mounted; skills write files mid-turn. */
 const POLL_MS = 4000
 
-/** One project folder found in the workspace. */
-interface FoundProject {
-  readonly root: string
-  readonly folder: string
-  readonly project?: Project
-  readonly error?: string
-}
+/** Open items shown before the list is expanded. */
+const PENDING_PREVIEW = 5
 
 /** Files per stage directory, keyed by stage id. */
 type StageFiles = Record<string, readonly WorkspaceDirectoryEntry[]>
+
+/** Evidence counts keyed by absolute file path. */
+type FileEvidence = Record<string, EvidenceCounts>
 
 const byName = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
 
@@ -47,6 +59,14 @@ function basename(path: string): string {
 
 function stageNumber(index: number): string {
   return String(index + 1).padStart(2, '0')
+}
+
+function isMarkdown(name: string): boolean {
+  return /\.(?:md|markdown)$/iu.test(name)
+}
+
+function stageName(id: string | undefined): string | undefined {
+  return STAGES.find(stage => stage.id === id)?.name
 }
 
 /** Owning skills as small monospace chips. */
@@ -59,51 +79,112 @@ function SkillChips({ stage }: { readonly stage: StageDefinition }): ReactNode {
   )
 }
 
+/** What an item says: its own text, or the fallback for a derived item without a note. */
+function itemText(item: PendingItem, t: ProjectBodyProps['t']): string {
+  if (item.text !== undefined) return item.text
+  if (item.station === undefined) return t('pending.skippedNoNote')
+  return item.kind === 'blocked' ? t('pending.blockedNoNote') : t('pending.passedNoNote')
+}
+
+/** The open-items list under the summary card. */
+function PendingList({ items, projectName, onOpen, onAsk, t }: {
+  readonly items: readonly PendingItem[]
+  readonly projectName: string
+  readonly onOpen: (source: string) => void
+  readonly onAsk: (text: string) => StarterResult
+  readonly t: ProjectBodyProps['t']
+}): ReactNode {
+  const [expanded, setExpanded] = useState(false)
+  const [notice, setNotice] = useState<string | undefined>(undefined)
+  const ordered = PENDING_GROUPS.flatMap(group =>
+    items.filter(item => pendingGroupOf(item.kind) === group).map(item => ({ group, item })))
+  const shown = expanded ? ordered : ordered.slice(0, PENDING_PREVIEW)
+
+  const ask = (group: PendingGroup, item: PendingItem): void => {
+    const where = [stageName(item.stage), item.station].filter(part => part !== undefined).join(' ')
+    const lead = `${item.id ?? ''}${where === '' ? '' : t('pending.where', { where })}`
+    const label = lead === '' ? itemText(item, t) : `${lead} ${itemText(item, t)}`
+    const result = onAsk(t(`pending.starter.${group}`, { project: projectName, item: label }))
+    setNotice(result === 'sent' ? t('pending.sent') : t(result === 'busy' ? 'hero.busy' : 'hero.unavailable'))
+  }
+
+  return (
+    <section className={css.pending} aria-label={t('pending.title')}>
+      <div className={css.pendingHead}>
+        <span className={css.pendingTitle}>{t('pending.title')}</span>
+        <span className={css.pendingCount}>{ordered.length}</span>
+        {notice !== undefined && <span className={css.pendingNotice}>{notice}</span>}
+      </div>
+      <ul className={css.pendingList}>
+        {shown.map(({ group, item }, index) => (
+          <li key={item.key} className={`${css.pendingItem} ${css[`pending_${group}`] ?? ''}`}>
+            {(index === 0 || shown[index - 1]?.group !== group) && <div className={css.pendingGroup}>{t(`pending.group.${group}`)}</div>}
+            <div className={css.pendingRow}>
+              <span className={css.pendingMark} aria-hidden="true" />
+              <div className={css.pendingMain}>
+                <div className={css.pendingText}>
+                  {item.id !== undefined && <span className={css.pendingId}>{item.id}</span>}
+                  {itemText(item, t)}
+                </div>
+                {item.recommend !== undefined && <div className={css.pendingRecommend}>{t('pending.recommend', { text: item.recommend })}</div>}
+                <div className={css.pendingMeta}>
+                  {item.kind !== 'decision' && item.kind !== 'blocked' && <span className={css.pendingKind}>{t(`pending.kind.${item.kind}`)}</span>}
+                  {stageName(item.stage) !== undefined && <span>{stageName(item.stage)}{item.station === undefined ? '' : ` · ${item.station}`}</span>}
+                  {item.source !== undefined && (
+                    <button type="button" className={css.pendingSource} title={item.source} onClick={() => { onOpen(item.source ?? '') }}>
+                      {basename(item.source)}
+                    </button>
+                  )}
+                </div>
+              </div>
+              <button type="button" className={css.pendingAct} title={t('pending.actHint')} onClick={() => { ask(group, item) }}>
+                {t('pending.act')}
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {ordered.length > PENDING_PREVIEW && (
+        <button type="button" className={css.pendingMore} onClick={() => { setExpanded(value => !value) }}>
+          {expanded ? t('pending.less') : t('pending.more', { count: String(ordered.length - PENDING_PREVIEW) })}
+        </button>
+      )}
+    </section>
+  )
+}
+
 /** The project tab body. */
-export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list, t }: ProjectBodyProps): ReactNode {
+export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list, ask, t }: ProjectBodyProps): ReactNode {
   const { tab } = useTabInfo()
   const { signal } = tab
   const cwd = useSessions(sessions => sessions.byId[sessionId]?.cwd)
   const [projects, setProjects] = useState<readonly FoundProject[] | undefined>(undefined)
   const [selected, setSelected] = useState<string | undefined>(undefined)
   const [files, setFiles] = useState<StageFiles>({})
+  const [evidence, setEvidence] = useState<FileEvidence>({})
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [tick, setTick] = useState(0)
+  /** Counts per path with the file size they were read at; a size change rereads. */
+  const evidenceCache = useRef(new Map<string, { readonly size: number | undefined; readonly counts: EvidenceCounts }>())
 
-  const refresh = useCallback(() => { setTick(value => value + 1) }, [])
+  const poll = useCallback(() => { setTick(value => value + 1) }, [])
+  const refresh = useCallback(() => {
+    evidenceCache.current.clear()
+    poll()
+  }, [poll])
   useEffect(() => tab.actions.bindCommands({ refresh }), [tab.actions, refresh])
   useEffect(() => {
-    const timer = setInterval(refresh, POLL_MS)
+    const timer = setInterval(poll, POLL_MS)
     return () => { clearInterval(timer) }
-  }, [refresh])
+  }, [poll])
 
   // Discover projects: the workspace root itself, else its direct child folders.
   useEffect(() => {
     if (cwd === undefined || signal.aborted) return
     let cancelled = false
-    const load = async (root: string): Promise<FoundProject | undefined> => {
-      const result = await readText(sessionId, joinPath(root, 'aipm.json'), signal)
-      if (!result.ok) return result.error.code === 'workspace-file/not-found' ? undefined : { root, folder: basename(root), error: result.error.message }
-      const parsed = parseProject(result.value, basename(root))
-      return 'error' in parsed ? { root, folder: basename(root), error: parsed.error } : { root, folder: basename(root), project: parsed }
-    }
-    void (async () => {
-      const own = await load(cwd)
-      if (own !== undefined) {
-        if (!cancelled) setProjects([own])
-        return
-      }
-      const listing = await list(sessionId, cwd, signal)
-      if (!listing.ok) {
-        if (!cancelled) setProjects([])
-        return
-      }
-      const folders = listing.value.filter(entry => entry.type === 'directory' && !entry.name.startsWith('.'))
-      const found = (await Promise.all(folders.map(entry => load(joinPath(cwd, entry.name)))))
-        .filter((value): value is FoundProject => value !== undefined)
-        .sort((a, b) => (b.project?.updated ?? '').localeCompare(a.project?.updated ?? '') || byName.compare(a.folder, b.folder))
+    void discoverProjects({ readText, list }, sessionId, cwd, signal).then((found) => {
       if (!cancelled) setProjects(found)
-    })()
+    })
     return () => { cancelled = true }
   }, [cwd, sessionId, signal, readText, list, tick])
 
@@ -112,22 +193,36 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
     return projects.find(p => p.root === selected) ?? projects[0]
   }, [projects, selected])
 
-  // List each stage directory of the current project.
+  // List each stage directory of the current project and count evidence in its Markdown files.
   useEffect(() => {
     if (current?.project === undefined || signal.aborted) return
     let cancelled = false
+    const cache = evidenceCache.current
+    const countFile = async (path: string, size: number | undefined): Promise<readonly [string, EvidenceCounts] | undefined> => {
+      const cached = cache.get(path)
+      if (cached !== undefined && cached.size === size) return [path, cached.counts]
+      const read = await readText(sessionId, path, signal)
+      if (!read.ok) return undefined
+      const counts = countEvidence(read.value)
+      cache.set(path, { size, counts })
+      return [path, counts]
+    }
     void (async () => {
-      const entries = await Promise.all(STAGES.map(async (stage) => {
+      const stages = await Promise.all(STAGES.map(async (stage) => {
         const result = await list(sessionId, joinPath(current.root, stage.dir), signal)
         const visible = result.ok
           ? result.value.filter(entry => entry.type === 'file' && isDeliverable(entry.name)).sort((a, b) => byName.compare(a.name, b.name))
           : []
-        return [stage.id, visible] as const
+        const counted = await Promise.all(visible.filter(entry => isMarkdown(entry.name))
+          .map(entry => countFile(joinPath(current.root, stage.dir, entry.name), entry.size)))
+        return { id: stage.id, visible, counted }
       }))
-      if (!cancelled) setFiles(Object.fromEntries(entries))
+      if (cancelled) return
+      setFiles(Object.fromEntries(stages.map(stage => [stage.id, stage.visible])))
+      setEvidence(Object.fromEntries(stages.flatMap(stage => stage.counted.filter(entry => entry !== undefined))))
     })()
     return () => { cancelled = true }
-  }, [current?.root, current?.project, sessionId, signal, list, tick])
+  }, [current?.root, current?.project, sessionId, signal, readText, list, tick])
 
   if (cwd === undefined) return <div className={css.status}>{t('noWorkspace')}</div>
   if (projects === undefined) return <div className={css.status}>{t('loading')}</div>
@@ -160,6 +255,7 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
   const isOpen = (stage: Stage): boolean => open[stage.id] ?? (stage.id === project?.currentStage || (files[stage.id]?.length ?? 0) > 0)
   const done = project?.stages.filter(stage => stage.status === 'done').length ?? 0
   const currentStage = project?.stages.find(stage => stage.id === project.currentStage)
+  const pending = project === undefined ? [] : openItems(project)
 
   return (
     <div className={css.root}>
@@ -206,6 +302,17 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
             {currentStage !== undefined && <span className={css.summaryCurrent}>{t('summary.current', { stage: currentStage.name })}</span>}
           </div>
         </div>
+      )}
+
+      {project !== undefined && pending.length > 0 && (
+        <PendingList
+          key={current.root}
+          items={pending}
+          projectName={project.name}
+          onOpen={(source) => { openFile(joinPath(current.root, source)) }}
+          onAsk={text => ask(sessionId, text)}
+          t={t}
+        />
       )}
 
       {project !== undefined && (
@@ -267,11 +374,13 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
                           <ul className={css.files}>
                             {stageFiles.map((entry) => {
                               const path = joinPath(current.root, stage.dir, entry.name)
+                              const counts = evidence[path]
                               return (
                                 <li key={entry.name}>
                                   <button type="button" className={css.file} onClick={() => { openFile(path) }} title={path}>
                                     <FileTypeIcon kind={classifyFileType(entry.name)} size={16} />
                                     <span className={css.fileName}>{entry.name}</span>
+                                    {counts !== undefined && <EvidenceBar counts={counts} variant="mini" t={t} />}
                                   </button>
                                 </li>
                               )

@@ -1,0 +1,99 @@
+/* Evidence composition: a stacked bar and the tag highlights in the editor.
+   Hues are fixed accents shared by both themes: hard evidence teal, leads amber,
+   conflicts red, tags that are not yet evidence violet. */
+
+.root {
+  --ev-hard: #00a48f;
+  --ev-lead: #d99a00;
+  --ev-conflict: #d93d3d;
+  --ev-unverified: #8a63d2;
+  --ev-track: var(--dsw-alias-border-l2);
+}
+
+.mini {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 4px;
+  margin-left: auto;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--ev-track);
+}
+
+.full {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 16px 9px;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l3);
+  font-size: 12px;
+}
+
+.fullBar {
+  display: flex;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--ev-track);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  align-items: center;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.caption {
+  color: var(--dsw-alias-label-tertiary);
+  font-weight: 650;
+}
+
+.item {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.hint {
+  margin-left: auto;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  corner-shape: round;
+}
+
+/* Segment widths come from inline flex-grow, one unit per tag. */
+.mini > span,
+.fullBar > span {
+  flex-basis: 0;
+  min-width: 2px;
+}
+
+.seg_hard { background: var(--ev-hard); }
+.seg_lead { background: var(--ev-lead); }
+.seg_conflict { background: var(--ev-conflict); }
+.seg_unverified { background: var(--ev-unverified); }
+
+/* Inline highlights applied as ProseMirror decorations inside the editor. Text
+   keeps the theme's colour; the hue sits in the tint and the underline. */
+.tag_hard,
+.tag_lead,
+.tag_conflict,
+.tag_unverified {
+  padding: 0 1px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.tag_hard { background: color-mix(in srgb, #00a48f 16%, transparent); box-shadow: inset 0 -1.5px #00a48f; }
+.tag_lead { background: color-mix(in srgb, #d99a00 18%, transparent); box-shadow: inset 0 -1.5px #d99a00; }
+.tag_conflict { background: color-mix(in srgb, #d93d3d 16%, transparent); box-shadow: inset 0 -1.5px #d93d3d; }
+.tag_unverified { background: color-mix(in srgb, #8a63d2 16%, transparent); box-shadow: inset 0 -1.5px #8a63d2; }

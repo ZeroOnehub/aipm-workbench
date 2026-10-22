@@ -16,8 +16,20 @@ import { createEditor, editorStyles } from './crepe-setup.ts'
 import type { EditorHandle } from './editor-types.ts'
 import { base64Of, imageNameFor, joinFrontMatter, quoteForAgent, readDraft, splitFrontMatter, writeDraft } from './document.ts'
 import type { MarkdownEditorInjected } from './face.ts'
+import { countEvidence } from '../evidence.ts'
+import type { EvidenceCounts } from '../evidence.ts'
+import { EvidenceBar } from '../EvidenceBar.tsx'
 import type {} from '../locales.ts'
 import css from './editor.module.css'
+import evidenceCss from '../evidence.module.css'
+
+/** Tag highlight classes handed to the Crepe assembly. */
+const EVIDENCE_CLASS = {
+  hard: evidenceCss.tag_hard ?? '',
+  lead: evidenceCss.tag_lead ?? '',
+  conflict: evidenceCss.tag_conflict ?? '',
+  unverified: evidenceCss.tag_unverified ?? '',
+}
 
 /** The body's composed props. */
 export type MarkdownEditorBodyProps =
@@ -62,6 +74,7 @@ export function MarkdownEditorBody(props: MarkdownEditorBodyProps): ReactNode {
   const [notice, setNotice] = useState<Notice | undefined>(undefined)
   const [styles, setStyles] = useState('')
   const [generation, setGeneration] = useState(0)
+  const [evidence, setEvidence] = useState<EvidenceCounts | undefined>(undefined)
 
   const flash = useCallback((text: string, tone: Notice['tone'] = 'info') => { setNotice({ text, tone }) }, [])
   useEffect(() => {
@@ -104,11 +117,15 @@ export function MarkdownEditorBody(props: MarkdownEditorBodyProps): ReactNode {
       if (host === null) return
       host.replaceChildren()
       const documentDirectory = pathPartsOf(result.value.absolutePath).directory
-      created = await createEditor(host, restore ? draft.markdown : body, {
+      const initial = restore ? draft.markdown : body
+      setEvidence(countEvidence(initial))
+      created = await createEditor(host, initial, {
         placeholder: t('editor.placeholder'),
+        evidenceClass: EVIDENCE_CLASS,
         onChange: (markdown) => {
           const changed = markdown !== baseRef.current.baseline
           setDirty(changed)
+          setEvidence(countEvidence(markdown))
           writeDraft(baseRef.current.absolutePath, changed
             ? { baseVersion: baseRef.current.version, markdown, savedAt: Date.now() }
             : undefined)
@@ -246,6 +263,7 @@ export function MarkdownEditorBody(props: MarkdownEditorBodyProps): ReactNode {
         <button type="button" className={css.button} onMouseDown={(event) => { event.preventDefault() }} onClick={onSendToAgent}>{t('editor.sendToAgent')}</button>
         <button type="button" className={css.primary} disabled={!dirty || saving} title={t('editor.shortcut')} onClick={() => { void doSave(false) }}>{t('editor.save')}</button>
       </div>
+      {phase === 'ready' && evidence !== undefined && <EvidenceBar counts={evidence} variant="full" t={t} />}
       {conflict !== undefined && (
         <div className={css.conflict} role="alert">
           <span>{conflict === 'stale' ? t('editor.conflictStale') : t('editor.conflictExternal')}</span>

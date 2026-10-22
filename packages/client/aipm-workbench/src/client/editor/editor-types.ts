@@ -1,4 +1,5 @@
 /** Types shared by the editor body and the lazily loaded Crepe assembly. */
+import type { EvidenceKind } from '../evidence.ts'
 
 /** What the body needs from a live editor. */
 export interface EditorHandle {
@@ -26,4 +27,6 @@ export interface EditorOptions {
   readonly proxyUrl: (url: string) => string
   /** Report an upload failure. @param error - what went wrong. */
   readonly onUploadError: (error: unknown) => void
+  /** Class applied to each evidence tag in the document, by kind. Display only; the Markdown is unchanged. */
+  readonly evidenceClass: Readonly<Record<EvidenceKind, string>>
 }

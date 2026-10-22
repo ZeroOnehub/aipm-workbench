@@ -7,6 +7,9 @@
  * are stored beside the document through `uploadImage` and inserted as a
  * relative Markdown image, so the file stays plain Markdown plus an `images/`
  * directory.
+ *
+ * Evidence tags (【用户原话】 and the rest) are highlighted through ProseMirror
+ * decorations recomputed on each document change; they never enter the Markdown.
  */
 import { CrepeBuilder } from '@milkdown/crepe/builder'
 import { blockEdit } from '@milkdown/crepe/feature/block-edit'
@@ -18,7 +21,11 @@ import { placeholder } from '@milkdown/crepe/feature/placeholder'
 import { table } from '@milkdown/crepe/feature/table'
 import { toolbar } from '@milkdown/crepe/feature/toolbar'
 import { editorViewCtx, remarkStringifyOptionsCtx } from '@milkdown/kit/core'
-import { insert } from '@milkdown/kit/utils'
+import type { Node as ProseNode } from '@milkdown/kit/prose/model'
+import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
+import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
+import { $prose, insert } from '@milkdown/kit/utils'
+import { findEvidence } from '../evidence.ts'
 import type { EditorHandle, EditorOptions } from './editor-types.ts'
 import blockEditCss from '@milkdown/crepe/theme/common/block-edit.css?inline'
 import cursorCss from '@milkdown/crepe/theme/common/cursor.css?inline'
@@ -36,6 +43,20 @@ export const editorStyles = [
   prosemirrorCss, resetCss, blockEditCss, cursorCss, imageBlockCss,
   linkTooltipCss, listItemCss, placeholderCss, toolbarCss, tableCss,
 ].join('\n')
+
+const evidenceKey = new PluginKey<DecorationSet>('aipm-evidence')
+
+/** Inline decorations over every evidence tag inside a single text node. */
+function evidenceDecorations(doc: ProseNode, classes: EditorOptions['evidenceClass']): DecorationSet {
+  const decorations: Decoration[] = []
+  doc.descendants((node, pos) => {
+    if (node.text === undefined) return
+    for (const mark of findEvidence(node.text)) {
+      decorations.push(Decoration.inline(pos + mark.from, pos + mark.to, { class: classes[mark.kind] }))
+    }
+  })
+  return DecorationSet.create(doc, decorations)
+}
 
 /** Image files carried by a paste or drop, in order. */
 function imageFiles(data: DataTransfer | null): File[] {
@@ -66,6 +87,14 @@ export async function createEditor(root: HTMLElement, markdown: string, options:
   crepe.on(listener => listener.markdownUpdated((_ctx, next) => { options.onChange(next) }))
   // Keep `-` bullets, the form the studio's skills and Feishu imports use.
   crepe.editor.config((ctx) => { ctx.update(remarkStringifyOptionsCtx, prev => ({ ...prev, bullet: '-' as const })) })
+  crepe.editor.use($prose(() => new Plugin<DecorationSet>({
+    key: evidenceKey,
+    state: {
+      init: (_config, state) => evidenceDecorations(state.doc, options.evidenceClass),
+      apply: (tr, set) => tr.docChanged ? evidenceDecorations(tr.doc, options.evidenceClass) : set,
+    },
+    props: { decorations: state => evidenceKey.getState(state) },
+  })))
   await crepe.create()
 
   const insertMarkdown = (text: string): void => { crepe.editor.action(insert(text)) }

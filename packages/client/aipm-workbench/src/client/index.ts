@@ -1,7 +1,8 @@
 /**
  * Browser half of AIPM 工坊: the brand occupants for the sidebar and the
- * conversation hero, the `aipm-project` right-Sidebar tab type, and the
- * `aipm-markdown-editor` tab type that opens workspace `.md` files for editing.
+ * conversation hero, the Hero footer with recent projects and stage starters,
+ * the `aipm-project` right-Sidebar tab type, and the `aipm-markdown-editor` tab
+ * type that opens workspace `.md` files for editing.
  */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
@@ -19,10 +20,12 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { MarkdownEditorInjected } from './editor/face.ts'
 import { MarkdownEditorBody } from './editor/MarkdownEditorBody.tsx'
 import { projectFiles } from './files.ts'
+import type { ProjectFiles } from './files.ts'
 import { HeroStages } from './HeroStages.tsx'
 import type { HeroInjected, StarterResult } from './HeroStages.tsx'
 import { en, zh } from './locales.ts'
 import { ProjectBody } from './ProjectBody.tsx'
+import type { ProjectActions } from './ProjectBody.tsx'
 import { ProjectTitle } from './ProjectTitle.tsx'
 
 export type { AipmWorkbenchKey } from './locales.ts'
@@ -37,7 +40,7 @@ const PROJECT_ID = '@deepseek-ai/dsh-client-aipm-workbench'
 const EDITOR_ID = '@deepseek-ai/dsh-client-aipm-workbench/markdown-editor'
 
 /** Required browser services. */
-export const inject = ['slots', 'locale', 'sidebarRightTabs', 'remote', 'remote.workspaceFiles', 'sessions']
+export const inject = ['slots', 'locale', 'sidebarRight', 'sidebarRightTabs', 'remote', 'remote.workspaceFiles', 'sessions']
 
 /**
  * Client plugin body: register copy, the brand occupants, and the project tab.
@@ -62,9 +65,25 @@ export function apply(ctx: ClientContext): void {
     guide: [{ id: 'project', order: 1, title: () => t('guide.title'), description: () => t('guide.description') }],
   }), 'aipm-workbench: project tab type')
 
+  const remote = ctx.remote
+  const sessions = ctx.sessions
+
+  /** Append `text` to a Session's composer draft and focus it. */
+  const writeComposer = (sessionId: SessionId, text: string): StarterResult => {
+    const actx = sessions.scope(sessionId)
+    const input = actx?.get('conversation')?.input.for(actx)
+    if (input === undefined) return 'unavailable'
+    const state = input.state.getSnapshot()
+    if (state.phase !== 'plain') return 'busy'
+    input.setDraft(state.draft.trim() === '' ? text : `${state.draft.replace(/\s+$/, '')}\n${text}`)
+    input.focus()
+    return 'sent'
+  }
+
   const files = projectFiles(ctx.remote)
+  const project: ProjectFiles & ProjectActions = { ...files, ask: writeComposer }
   ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register(
-    { name: 'sidebar.right.pane.tab', key: PROJECT_ID, locale: NS, inject: () => files },
+    { name: 'sidebar.right.pane.tab', key: PROJECT_ID, locale: NS, inject: () => project },
     ProjectBody,
   )), 'aipm-workbench: project tab body')
   ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab.title', () => ctx.slots.register(
@@ -83,23 +102,12 @@ export function apply(ctx: ClientContext): void {
     title: address => pathPartsOf(parseFileAddress(address)?.path ?? address).name,
   }), 'aipm-workbench: markdown editor type')
 
-  const remote = ctx.remote
-  const sessions = ctx.sessions
-
-  /** Append `text` to a Session's composer draft and focus it. */
-  const writeComposer = (sessionId: SessionId, text: string): StarterResult => {
-    const actx = sessions.scope(sessionId)
-    const input = actx?.get('conversation')?.input.for(actx)
-    if (input === undefined) return 'unavailable'
-    const state = input.state.getSnapshot()
-    if (state.phase !== 'plain') return 'busy'
-    input.setDraft(state.draft.trim() === '' ? text : `${state.draft.replace(/\s+$/, '')}\n${text}`)
-    input.focus()
-    return 'sent'
+  // The blank-session Hero lists recent projects, then the six stages as starter cards.
+  const hero: HeroInjected = {
+    ...files,
+    start: writeComposer,
+    openProjects: () => { ctx.sidebarRight.openTab('aipm-project') },
   }
-
-  // The blank-session Hero shows the six stages as starter cards under the composer.
-  const hero: HeroInjected = { start: writeComposer }
   ctx.effect(() => ctx.slots.inject('conversation.hero.footer', () => ctx.slots.register(
     { name: 'conversation.hero.footer', locale: NS, inject: () => hero },
     HeroStages,

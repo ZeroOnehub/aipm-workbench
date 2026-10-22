@@ -49,20 +49,20 @@ export const STAGES: readonly StageDefinition[] = [
   },
   {
     id: 'ai-design', name: 'AI 方案设计', dir: '04-AI方案设计',
-    skills: ['system-prompt-design', 'harness-patterns'],
-    output: '系统提示词和 Agent 方案',
+    skills: ['agent-architecture', 'system-prompt-design', 'build-launch', 'harness-patterns'],
+    output: '架构方案、系统提示词、研发交接包',
     starter: '/aipm-hub 继续项目，进入 AI 方案设计阶段',
   },
   {
     id: 'evaluation', name: '评测', dir: '05-评测',
     skills: ['eval-error-analysis', 'eval-judge-prompt', 'eval-validate-judge'],
-    output: '错误分析、评委和校准结果',
+    output: '可行性小样、错误分析、评委校准',
     starter: '/aipm-hub 继续项目，进入评测阶段',
   },
   {
     id: 'launch-review', name: '上线复盘', dir: '06-上线复盘',
-    skills: ['metrics-review', 'retro'],
-    output: '指标复盘和复盘结论',
+    skills: ['build-launch', 'metrics-review', 'retro'],
+    output: '上线检查、指标复盘、下一轮结论',
     starter: '/aipm-hub 继续项目，进入上线复盘阶段',
   },
 ]
@@ -82,6 +82,48 @@ export interface Stage extends StageDefinition {
   readonly stations: readonly Station[]
 }
 
+/** What an open item asks of the user: a decision, an assumption or evidence gap to check, or a blocker. */
+export type PendingKind = 'decision' | 'assumption' | 'gap' | 'blocked'
+
+/**
+ * One open item. Items written by the skills come from `aipm.json` `pending`;
+ * derived items come from a `passed_pending` or `blocked` station or a skipped
+ * stage, so older files without `pending` still list what is open.
+ */
+export interface PendingItem {
+  /** Stable React key: the file's item id, or `stage:station` for a derived item. */
+  readonly key: string
+  /** Id the skills use to refer to the item (`D1`, `A3`); absent for derived items. */
+  readonly id?: string | undefined
+  readonly kind: PendingKind
+  /** What is open; for a derived item the station or stage note, when written. */
+  readonly text?: string | undefined
+  /** Stage id the item belongs to. */
+  readonly stage?: string | undefined
+  /** Station label (`02 写清价值`) for an item derived from a station. */
+  readonly station?: string | undefined
+  /** Deliverable path relative to the project root where the item is discussed. */
+  readonly source?: string | undefined
+  /** Recommended answer for a decision. */
+  readonly recommend?: string | undefined
+  readonly derived: boolean
+}
+
+/** Open-item groups the user sees: a decision to make, a blocker, or something to verify. */
+export type PendingGroup = 'decision' | 'blocked' | 'verify'
+
+/** Groups in display order. */
+export const PENDING_GROUPS: readonly PendingGroup[] = ['decision', 'blocked', 'verify']
+
+/**
+ * The group an item is listed under.
+ * @param kind - item kind.
+ * @returns `verify` for assumptions and evidence gaps, otherwise the kind itself.
+ */
+export function pendingGroupOf(kind: PendingKind): PendingGroup {
+  return kind === 'assumption' || kind === 'gap' ? 'verify' : kind
+}
+
 /** A parsed project. */
 export interface Project {
   readonly name: string
@@ -89,10 +131,13 @@ export interface Project {
   readonly updated?: string | undefined
   readonly currentStage?: string | undefined
   readonly stages: readonly Stage[]
+  /** Open items written by the skills; resolved ones are dropped. */
+  readonly pending: readonly PendingItem[]
 }
 
 const STAGE_STATUSES: readonly StageStatus[] = ['unavailable', 'not_started', 'in_progress', 'done', 'skipped']
 const STATION_STATUSES: readonly StationStatus[] = ['not_started', 'in_progress', 'passed', 'passed_pending', 'blocked']
+const PENDING_KINDS: readonly PendingKind[] = ['decision', 'assumption', 'gap', 'blocked']
 
 function record(value: unknown): Record<string, unknown> | undefined {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : undefined
@@ -139,13 +184,53 @@ export function parseProject(raw: string, folder: string): Project | { error: st
       stations,
     }
   })
+  const pending = (Array.isArray(root.pending) ? root.pending.map(record).filter(p => p !== undefined) : [])
+    .filter(p => p.status !== 'resolved' && text(p.text) !== undefined)
+    .map((p, index): PendingItem => ({
+      key: `pending:${text(p.id) ?? index}`,
+      id: text(p.id),
+      kind: oneOf(p.kind, PENDING_KINDS, 'decision'),
+      text: text(p.text),
+      stage: text(p.stage),
+      source: text(p.source),
+      recommend: text(p.recommend),
+      derived: false,
+    }))
   return {
     name: text(root.project) ?? folder,
     ...(text(root.type) === undefined ? {} : { type: text(root.type) }),
     ...(text(root.updated) === undefined ? {} : { updated: text(root.updated) }),
     ...(text(root.currentStage) === undefined ? {} : { currentStage: text(root.currentStage) }),
     stages,
+    pending,
   }
+}
+
+/**
+ * Every open item of a project: the skills' own items, then items derived from
+ * blocked or conditionally passed stations and skipped stages, in stage order.
+ * @param project - parsed project.
+ * @returns open items; empty when nothing is open.
+ */
+export function openItems(project: Project): PendingItem[] {
+  const derived: PendingItem[] = []
+  for (const stage of project.stages) {
+    if (stage.status === 'skipped') {
+      derived.push({ key: `stage:${stage.id}`, kind: 'assumption', text: stage.note, stage: stage.id, derived: true })
+    }
+    for (const station of stage.stations) {
+      if (station.status !== 'blocked' && station.status !== 'passed_pending') continue
+      derived.push({
+        key: `station:${stage.id}:${station.id}`,
+        kind: station.status === 'blocked' ? 'blocked' : 'assumption',
+        text: station.note,
+        stage: stage.id,
+        station: `${station.id} ${station.name}`,
+        derived: true,
+      })
+    }
+  }
+  return [...project.pending, ...derived]
 }
 
 /**

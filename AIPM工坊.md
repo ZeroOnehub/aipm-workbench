@@ -11,17 +11,20 @@
 
 ## 用法
 
-- **从首页开始**：新会话的输入框下面有六张阶段卡片，点一张就把这个阶段的开场指令放进输入框，补一句话再发送。
+- **从首页开始**：新会话的输入框下面先列出最近的项目（最多 3 个），每个显示当前阶段和「几件等你拍板 / 卡住 / 待验证」，点项目就接着上次的进度走，点「看全部待处理」打开项目面板。再往下是六张阶段卡片，点一张就把这个阶段的开场指令放进输入框，补一句话再发送。
 - 新建或继续项目：在输入框说「新建项目」「继续上次的项目」，或输入 `/aipm-hub`。
 - 直接做某一步：输入 `/project-initiation`（立项）、`/prd`（PRD）等 skill 名。
 - 看进度和产出物：点右上角的侧栏按钮，选「项目」。面板顶部是总进度，下面是六个阶段的时间线，点产出物文件可以在旁边预览或编辑 md 和 html。
+- **待处理**：面板总进度下面列出等你拍板、卡住、待验证的事（来自 `aipm.json` 的 `pending`，以及带待验证项通过、卡住的站）。点「去处理」把这件事放进输入框，补一句你的决定或新证据再发送。
+- **证据构成**：每份 md 产出物后面有一条小色条，绿色是硬证据（用户原话、行为数据、实测、公开资料），黄色是线索，红色是冲突，紫色是测算、模拟、AI 推断这类还不能当依据的。打开文档后，正文里的证据标签会按同样的颜色高亮，顶部有完整的统计。
+- 阶段不用按顺序走：总控会按最危险的假设推荐下一步，比如 PRD 还没写完就先做 AI 可行性小样。
 
 ## 各部分在哪
 
 | 东西 | 位置 |
 |---|---|
 | 项目和产出物 | `~/Documents/project/AI Workbench/workspace/<项目名>/`，每个阶段一个子文件夹，进度在 `aipm.json` |
-| 全部 skill（总控、立项 + PRD、原型、评测等 17 个工具 skill） | `~/Documents/project/AIPM Skill Pack/skills/`（GitHub 仓库 aipm-skill-pack），通过 `workspace/.dsh/skills` 链接接入 |
+| 全部 21 个 skill（总控、立项、PRD、原型、架构方案、研发交接与上线检查、评测、复盘） | `~/Documents/project/AIPM Skill Pack/skills/`（GitHub 仓库 aipm-skill-pack），通过 `workspace/.dsh/skills` 链接接入 |
 | 本地个人 skill（课堂笔记、写作，不上传） | `~/Documents/project/AI Workbench/aipm-skills/`（只在本机） |
 | 工坊源码 | `~/Documents/project/AI Workbench/aipm-workbench/`（GitHub 仓库 aipm-workbench，`main` 分支） |
 | 工坊数据（会话、设置、密钥） | `~/.aipm-studio/`，和官方 DeepSeek Harness 的 `~/.dsh/` 分开 |

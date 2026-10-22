@@ -10,7 +10,7 @@
   基于 DeepSeek 开源的 Agent 框架 <a href="https://github.com/deepseek-ai/deepseek-harness">DeepSeek Harness</a> 二次开发 · 默认使用 DeepSeek 模型 · macOS 桌面端
 </p>
 
-![首页：六个阶段的开场卡片](docs/aipm/screenshots/home.png)
+![首页：继续你的项目和六个阶段的开场卡片](docs/aipm/screenshots/home.png)
 
 ## 为什么做
 
@@ -18,9 +18,9 @@
 
 拾阶把这些固化下来：
 
-- **流程**：立项 → PRD → 原型交互 → AI 方案设计 → 评测 → 上线复盘，六个阶段，每个阶段由专门的 Skill 带着走，有关卡、有模板、有自检。
-- **证据纪律**：每个结论标来源（用户原话、行为数据、公开资料、测算、AI 推断……），没证据的标「待验证」，不编造。
-- **进度可见**：每个项目一个 `aipm.json`，右侧「项目」面板实时显示走到哪个阶段、哪一站、产出了什么。
+- **流程**：立项 → PRD → 原型交互 → AI 方案设计 → 评测 → 上线复盘，六个阶段，每个阶段由专门的 Skill 带着走，有关卡、有模板、有自检。阶段不要求按顺序走：总控看哪个假设最危险来推荐下一步，比如 PRD 没写完就先做半天的 AI 可行性小样。
+- **证据纪律**：每个结论标来源（用户原话、行为数据、公开资料、测算、AI 推断……），没证据的标「待验证」，不编造。每份产出物的证据构成在界面上一眼可见。
+- **进度和待办可见**：每个项目一个 `aipm.json`，首页和「项目」面板实时显示走到哪一站、哪些事等你拍板、哪些假设还没验证。
 
 ## 六个阶段
 
@@ -29,19 +29,20 @@
 | 01 立项 | `project-initiation`（访谈用 `interview-script`、整理用 `research-synthesis`） | 立项报告：做不做、先做多小、怎么算成、什么情况下停 |
 | 02 PRD | `prd`，审查用 `prd-review` | PRD：价值主张、功能与验收标准、AI 能力边界、评测样例 |
 | 03 原型交互 | `html-wireframe` → `html-prototype` | 低保真线框图、可交互的高保真原型 |
-| 04 AI 方案设计 | `system-prompt-design`、`harness-patterns` | 系统提示词、Agent 方案 |
-| 05 评测 | `eval-synthetic-data` → `eval-error-analysis` → `eval-judge-prompt` → `eval-validate-judge` | 测试集、错误分析、校准过的评委 |
-| 06 上线复盘 | `metrics-review` → `retro` | 指标复盘、复盘结论（对照立项时的预测） |
+| 04 AI 方案设计 | `agent-architecture` → `system-prompt-design` → `build-launch`，深入 Agent 机制用 `harness-patterns` | 架构方案（先判断要不要做成 Agent，再定模型成本和组件）、系统提示词、给研发或编码 AI 的交接包 |
+| 05 评测 | AI 可行性小样 → `eval-synthetic-data` → `eval-error-analysis` → `eval-judge-prompt` → `eval-validate-judge` | 小样结论、测试集、错误分析、校准过的评委 |
+| 06 上线复盘 | `build-launch` → `metrics-review` → `retro` | 上线检查（埋点、灰度、上线是否表）、指标复盘、下一轮结论（对照立项时的预测） |
 
-全部 19 个 Skill（总控、立项和 17 个工具 Skill）都在 [AIPM Skill Pack](https://github.com/ZeroOnehub/aipm-skill-pack)。
+全部 21 个 Skill 都在 [AIPM Skill Pack](https://github.com/ZeroOnehub/aipm-skill-pack)：总控、立项、架构方案、研发交接与上线检查 4 个是我自己写的，另外 17 个工具 Skill 改编自开源项目。
 
 ![项目面板：六阶段时间线](docs/aipm/screenshots/project.png)
 
 ## 主要功能
 
-- **首页六阶段卡片**：新会话的输入框下面列出六个阶段，点一张就把这个阶段的开场指令放进输入框。
-- **项目面板**：总进度条 + 六阶段时间线，每个阶段显示负责的 Skill、各站关卡状态和产出物，点文件直接打开。
-- **Markdown 所见即所得编辑**：产出物直接在工坊里改，粘贴截图自动存到文档旁边，⌘S 保存；选中一段文字「发给 AI」继续讨论；AI 和你同时改了同一个文件时会提示冲突，不会互相覆盖。
+- **首页：继续你的项目**：新会话的输入框下面先列出最近的项目，每个显示当前阶段和「几件等你拍板 / 卡住 / 待验证」，点一下接着上次的进度走；再往下是六张阶段卡片，点一张把这个阶段的开场指令放进输入框。
+- **项目面板**：总进度条、待处理列表和六阶段时间线。待处理把等你拍板的决定、卡住的站、待验证的假设集中列出，点「去处理」就放进输入框；时间线显示每个阶段负责的 Skill、各站关卡状态和产出物。
+- **证据构成**：每份 Markdown 产出物后面有一条色条，绿色是硬证据，黄色是线索，红色是冲突，紫色是测算、模拟、AI 推断这类还不能当依据的，一眼看出哪份文档的结论最虚。
+- **Markdown 所见即所得编辑**：产出物直接在拾阶里改，正文里的证据标签按颜色高亮；粘贴截图自动存到文档旁边，⌘S 保存；选中一段文字「发给 AI」继续讨论；AI 和你同时改了同一个文件时会提示冲突，不会互相覆盖。
 - **文档在中间、对话在右边**：边看产出物边和 AI 讨论。
 - **拾阶人设预设**：中文、短句、先给判断再提问，事实和数字必须能追到来源。
 - **独立的桌面 App**：自己的名称、图标和数据目录（`~/.aipm-studio`），和官方 DeepSeek Harness 互不干扰。
@@ -53,7 +54,7 @@ flowchart LR
   PM[产品经理] --> UI[桌面 App]
 
   subgraph AIPM[拾阶的定制]
-    Client[客户端插件 aipm-workbench<br/>首页卡片 · 项目面板 · Markdown 编辑器]
+    Client[客户端插件 aipm-workbench<br/>首页 · 项目面板与待处理 · 证据统计 · Markdown 编辑器]
     Preset[拾阶预设<br/>人设 + 插件组合]
     Files[workspace-files 扩展<br/>按版本写入 · 图片资源]
   end
@@ -64,8 +65,8 @@ flowchart LR
     Loop --> LLM[DeepSeek 模型]
   end
 
-  subgraph Skills[AIPM Skill Pack · 19 个 Skill]
-    Flow[流程 Skill<br/>总控 + 立项]
+  subgraph Skills[AIPM Skill Pack · 21 个 Skill]
+    Flow[自写 Skill<br/>总控 · 立项 · 架构方案 · 研发交接与上线检查]
     Pack[工具 Skill<br/>17 个]
   end
 
@@ -86,7 +87,7 @@ DeepSeek Harness 的「一切皆插件」架构让定制不需要改核心：工
 
 | 位置 | 内容 |
 |---|---|
-| `packages/client/aipm-workbench/` | 客户端插件：品牌、首页六阶段卡片、项目面板、Markdown 编辑器 |
+| `packages/client/aipm-workbench/` | 客户端插件：品牌、首页（继续你的项目、六阶段卡片）、项目面板与待处理、证据统计、Markdown 编辑器 |
 | `packages/bundle/web-app/presets/aipm.patch.yml` | 拾阶预设：人设与插件组合 |
 | `packages/api/workspace-files/` | 新增按版本校验的文本写入和图片资源写入，供编辑器使用 |
 | `packages/client/ui-conversation/` | 新增首页底部插槽 `conversation.hero.footer`；首页文案 |
