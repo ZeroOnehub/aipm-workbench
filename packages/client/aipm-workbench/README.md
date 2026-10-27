@@ -1,5 +1,5 @@
 ---
-description: "Shijie brand occupants and the right-Sidebar project tab that shows a project's open items, six stages, checkpoints, and deliverables with their evidence."
+description: "Shijie brand occupants and the right-Sidebar project tab that shows a project's build progress, open items, six stages, checkpoints, and deliverables with their evidence."
 kind: "package-reference"
 ---
 
@@ -21,9 +21,11 @@ For the selected project the tab shows the six fixed stages (`01-立项` … `06
 
 Above the stages, an open-items list groups what waits for the user: decisions, blockers, and items to verify. Items come from the `pending` array in `aipm.json` (entries with `status: resolved` are dropped) plus items derived from `blocked` and `passed_pending` stations and `skipped` stages, so files written before `pending` existed still list their open work. "Handle" appends a `/aipm-hub` starter naming the project and the item to the Session's composer draft; an item's `source` path opens that deliverable.
 
+Once the `build-launch` skill hands a project off, `aipm.json` carries a `build` entry whose `path` is the product folder in the dev folder, outside the workspace. A build card above the open items then reads that folder's `docs/项目状态.md` (the `- 阶段：`, `- 最近更新：`, `- 上次停在：`, and `- 最新证据包：` lines the dev folder's `AGENTS.md` fixes) and, from the named evidence folder, `是否表.md` and `verify-输出.txt`. It shows the build stage on a six-segment bar (0 PRD check through 5 wrap-up), the last stop, the verify.sh verdict, and the gate rows answered 否 or 待验. "Ask the hub" appends a `/aipm-hub` progress question to the composer draft; "Open status file" opens the status file. When the status file cannot be read, the card names the path and falls back to the `build.stage` line the hub last recorded.
+
 Each Markdown deliverable shows a stacked bar of its evidence tags (【用户原话】, 【测算】, …) sorted into hard evidence, leads, conflicts, and tags that are not evidence yet, following the evidence table of the `project-initiation` skill. A file is read again only when its listed size changes or the refresh button is pressed.
 
-Directory listing is limited to the Session workspace by `dsh-api-workspace-files`, so the workspace must be the studio workspace (the folder that holds the project folders) or a single project folder.
+Directory listing is limited to the Session workspace by `dsh-api-workspace-files`, so the workspace must be the studio workspace (the folder that holds the project folders) or a single project folder. Text reads accept absolute paths outside the workspace, which is why the build card reads the dev folder by fixed file names and never lists it.
 
 ## Markdown editor tab
 
@@ -49,6 +51,7 @@ None.
 ## Known Limitations and Deferred Work
 
 - **Polling instead of watching** — the project tab and the editor reread on a fixed interval instead of following `workspaceFiles.changes`, so updates appear a few seconds late.
+- **Build card trusts the status file** — the card shows what the coding agent wrote in `docs/项目状态.md` and the latest evidence package; it does not run `verify.sh` or check that the evidence matches the code. The `code-check` skill does that comparison on request.
 - **Evidence counts are per file** — the project tab shows no project-wide total, because the project record (`00-项目档案.md`) repeats tags from the other deliverables. A tag legend table inside a document is counted like any other tag.
 - **Markdown normalization** — saving rewrites the file in Milkdown's Markdown form (table padding, escaping); content is unchanged but diffs can show formatting churn.
 - **No close guard** — the tab system cannot veto closing a dirty tab; the local-storage draft is the safety net.

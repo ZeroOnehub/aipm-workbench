@@ -1,7 +1,8 @@
 /**
- * The project tab body: pick a project in the session's workspace, list what is
- * open for the user, and show its six stages as a pipeline with their stations,
- * owning skills, and each stage directory's files.
+ * The project tab body: pick a project in the session's workspace, show its
+ * build progress once it is handed off to a dev folder, list what is open for
+ * the user, and show its six stages as a pipeline with their stations, owning
+ * skills, and each stage directory's files.
  *
  * Projects are folders holding `aipm.json`. When the workspace root itself
  * holds one, the workspace is that single project. Files open through the tab's
@@ -15,6 +16,9 @@ import { FileTypeIcon, IconRefreshOutlineRegular, Tooltip, classifyFileType } fr
 import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
 import type { WorkspaceDirectoryEntry } from '@deepseek-ai/dsh-api-workspace-files/types'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { readBuild, statusFilePath } from './build.ts'
+import type { BuildView } from './build.ts'
+import { BuildCard } from './BuildCard.tsx'
 import { countEvidence } from './evidence.ts'
 import type { EvidenceCounts } from './evidence.ts'
 import { EvidenceBar } from './EvidenceBar.tsx'
@@ -163,6 +167,7 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
   const [files, setFiles] = useState<StageFiles>({})
   const [evidence, setEvidence] = useState<FileEvidence>({})
   const [open, setOpen] = useState<Record<string, boolean>>({})
+  const [buildRead, setBuildRead] = useState<{ readonly path: string; readonly view: BuildView } | undefined>(undefined)
   const [tick, setTick] = useState(0)
   /** Counts per path with the file size they were read at; a size change rereads. */
   const evidenceCache = useRef(new Map<string, { readonly size: number | undefined; readonly counts: EvidenceCounts }>())
@@ -224,6 +229,17 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
     return () => { cancelled = true }
   }, [current?.root, current?.project, sessionId, signal, readText, list, tick])
 
+  // Read a handed-off project's dev folder: its status file and latest evidence.
+  const buildPath = current?.project?.build?.path
+  useEffect(() => {
+    if (buildPath === undefined || signal.aborted) return
+    let cancelled = false
+    void readBuild({ readText, list }, sessionId, buildPath, signal).then((view) => {
+      if (!cancelled) setBuildRead({ path: buildPath, view })
+    })
+    return () => { cancelled = true }
+  }, [buildPath, sessionId, signal, readText, list, tick])
+
   if (cwd === undefined) return <div className={css.status}>{t('noWorkspace')}</div>
   if (projects === undefined) return <div className={css.status}>{t('loading')}</div>
   if (current === undefined) {
@@ -256,6 +272,7 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
   const done = project?.stages.filter(stage => stage.status === 'done').length ?? 0
   const currentStage = project?.stages.find(stage => stage.id === project.currentStage)
   const pending = project === undefined ? [] : openItems(project)
+  const build = project?.build
 
   return (
     <div className={css.root}>
@@ -302,6 +319,18 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
             {currentStage !== undefined && <span className={css.summaryCurrent}>{t('summary.current', { stage: currentStage.name })}</span>}
           </div>
         </div>
+      )}
+
+      {project !== undefined && build !== undefined && (
+        <BuildCard
+          key={`build:${current.root}`}
+          build={build}
+          view={buildRead?.path === build.path ? buildRead.view : undefined}
+          projectName={project.name}
+          onAsk={text => ask(sessionId, text)}
+          onOpenStatus={() => { openFile(statusFilePath(build.path)) }}
+          t={t}
+        />
       )}
 
       {project !== undefined && pending.length > 0 && (

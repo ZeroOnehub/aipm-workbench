@@ -31,7 +31,7 @@ export interface StageDefinition {
 export const STAGES: readonly StageDefinition[] = [
   {
     id: 'initiation', name: '立项', dir: '01-立项',
-    skills: ['project-initiation', 'interview-script', 'research-synthesis'],
+    skills: ['project-initiation', 'interview-script', 'research-synthesis', 'code-check'],
     output: '立项报告：做不做、先做多小',
     starter: '/aipm-hub 新建项目。我想做的产品是：',
   },
@@ -50,13 +50,13 @@ export const STAGES: readonly StageDefinition[] = [
   {
     id: 'ai-design', name: 'AI 方案设计', dir: '04-AI方案设计',
     skills: ['agent-architecture', 'system-prompt-design', 'build-launch', 'harness-patterns'],
-    output: '架构方案、系统提示词、研发交接包',
+    output: '架构方案、系统提示词、研发交接包和开发文件夹',
     starter: '/aipm-hub 继续项目，进入 AI 方案设计阶段',
   },
   {
     id: 'evaluation', name: '评测', dir: '05-评测',
-    skills: ['eval-error-analysis', 'eval-judge-prompt', 'eval-validate-judge'],
-    output: '可行性小样、错误分析、评委校准',
+    skills: ['eval-error-analysis', 'code-check', 'eval-judge-prompt', 'eval-validate-judge'],
+    output: '可行性小样、对照验收、错误分析、评委校准',
     starter: '/aipm-hub 继续项目，进入评测阶段',
   },
   {
@@ -124,6 +124,23 @@ export function pendingGroupOf(kind: PendingKind): PendingGroup {
   return kind === 'assumption' || kind === 'gap' ? 'verify' : kind
 }
 
+/**
+ * Where a handed-off project's code lives: `aipm.json` `build`, written by the
+ * `build-launch` skill and refreshed by `aipm-hub` (references/aipm-json.md).
+ */
+export interface BuildInfo {
+  /** Absolute product folder inside the dev folder. */
+  readonly path: string
+  /** Who writes the code: a coding agent's name or a team. */
+  readonly tool?: string | undefined
+  readonly handoff?: string | undefined
+  readonly synced?: string | undefined
+  /** Stage line the hub last read; shown when the folder cannot be read. */
+  readonly stage?: string | undefined
+  /** Date of that read. */
+  readonly checked?: string | undefined
+}
+
 /** A parsed project. */
 export interface Project {
   readonly name: string
@@ -133,6 +150,8 @@ export interface Project {
   readonly stages: readonly Stage[]
   /** Open items written by the skills; resolved ones are dropped. */
   readonly pending: readonly PendingItem[]
+  /** Present once the project is handed off to a dev folder. */
+  readonly build?: BuildInfo | undefined
 }
 
 const STAGE_STATUSES: readonly StageStatus[] = ['unavailable', 'not_started', 'in_progress', 'done', 'skipped']
@@ -196,6 +215,8 @@ export function parseProject(raw: string, folder: string): Project | { error: st
       recommend: text(p.recommend),
       derived: false,
     }))
+  const build = record(root.build)
+  const buildPath = text(build?.path)
   return {
     name: text(root.project) ?? folder,
     ...(text(root.type) === undefined ? {} : { type: text(root.type) }),
@@ -203,6 +224,18 @@ export function parseProject(raw: string, folder: string): Project | { error: st
     ...(text(root.currentStage) === undefined ? {} : { currentStage: text(root.currentStage) }),
     stages,
     pending,
+    ...(buildPath === undefined
+      ? {}
+      : {
+        build: {
+          path: buildPath,
+          tool: text(build?.tool),
+          handoff: text(build?.handoff),
+          synced: text(build?.synced),
+          stage: text(build?.stage),
+          checked: text(build?.checked),
+        },
+      }),
   }
 }
 

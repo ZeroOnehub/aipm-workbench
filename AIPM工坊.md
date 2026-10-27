@@ -24,7 +24,7 @@
 | 东西 | 位置 |
 |---|---|
 | 项目和产出物 | `~/Documents/project/AI Workbench/workspace/<项目名>/`，每个阶段一个子文件夹，进度在 `aipm.json` |
-| 全部 21 个 skill（总控、立项、PRD、原型、架构方案、研发交接与上线检查、评测、复盘） | `~/Documents/project/AIPM Skill Pack/skills/`（GitHub 仓库 aipm-skill-pack），通过 `workspace/.dsh/skills` 链接接入 |
+| 全部 22 个 skill（总控、立项、PRD、原型、架构方案、研发交接与上线检查、代码对照验收、评测、复盘） | `~/Documents/project/AIPM Skill Pack/skills/`（GitHub 仓库 aipm-skill-pack），通过 `workspace/.dsh/skills` 链接接入 |
 | 本地个人 skill（课堂笔记、写作，不上传） | `~/Documents/project/AI Workbench/aipm-skills/`（只在本机） |
 | 工坊源码 | `~/Documents/project/AI Workbench/aipm-workbench/`（GitHub 仓库 aipm-workbench，`main` 分支） |
 | 工坊数据（会话、设置、密钥） | `~/.aipm-studio/`，和官方 DeepSeek Harness 的 `~/.dsh/` 分开 |
