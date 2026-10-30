@@ -17,6 +17,7 @@ import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
 import type { WorkspaceDirectoryEntry } from '@deepseek-ai/dsh-api-workspace-files/types'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { readBuild, statusFilePath } from './build.ts'
+import { PROJECT_CANVAS } from './canvas/model.ts'
 import type { BuildView } from './build.ts'
 import { BuildCard } from './BuildCard.tsx'
 import { countEvidence } from './evidence.ts'
@@ -25,15 +26,22 @@ import { EvidenceBar } from './EvidenceBar.tsx'
 import { discoverProjects } from './files.ts'
 import type { FoundProject, ProjectFiles } from './files.ts'
 import type { StarterResult } from './HeroStages.tsx'
-import { PENDING_GROUPS, STAGES, isDeliverable, joinPath, openItems, pendingGroupOf } from './model.ts'
-import type { PendingGroup, PendingItem, Stage, StageDefinition } from './model.ts'
+import { PENDING_GROUPS, STAGES, isDeliverable, joinPath, openItems, pendingGroupOf, stageNameIn } from './model.ts'
+import type { PendingGroup, PendingItem, Project, Stage, StageDefinition } from './model.ts'
 import type {} from './locales.ts'
 import css from './workbench.module.css'
 
-/** Composer access the tab uses to hand an open item to the agent. */
+/** Composer access the tab uses to hand an open item to the agent, and canvas creation. */
 export interface ProjectActions {
   /** Put `text` into the Session's composer draft and focus it. */
   readonly ask: (sessionId: SessionId, text: string) => StarterResult
+  /**
+   * Make sure a canvas file exists, writing an empty canvas when it does not.
+   * @param sessionId - authorizing Session.
+   * @param path - absolute `.canvas` path inside the workspace.
+   * @returns an error message, or `undefined` when the file is ready to open.
+   */
+  readonly ensureCanvas: (sessionId: SessionId, path: string) => Promise<string | undefined>
 }
 
 /** The body's composed props. */
@@ -69,10 +77,6 @@ function isMarkdown(name: string): boolean {
   return /\.(?:md|markdown)$/iu.test(name)
 }
 
-function stageName(id: string | undefined): string | undefined {
-  return STAGES.find(stage => stage.id === id)?.name
-}
-
 /** Owning skills as small monospace chips. */
 function SkillChips({ stage }: { readonly stage: StageDefinition }): ReactNode {
   return (
@@ -91,9 +95,9 @@ function itemText(item: PendingItem, t: ProjectBodyProps['t']): string {
 }
 
 /** The open-items list under the summary card. */
-function PendingList({ items, projectName, onOpen, onAsk, t }: {
+function PendingList({ items, project, onOpen, onAsk, t }: {
   readonly items: readonly PendingItem[]
-  readonly projectName: string
+  readonly project: Project
   readonly onOpen: (source: string) => void
   readonly onAsk: (text: string) => StarterResult
   readonly t: ProjectBodyProps['t']
@@ -104,11 +108,12 @@ function PendingList({ items, projectName, onOpen, onAsk, t }: {
     items.filter(item => pendingGroupOf(item.kind) === group).map(item => ({ group, item })))
   const shown = expanded ? ordered : ordered.slice(0, PENDING_PREVIEW)
 
+  const stageName = (id: string | undefined): string | undefined => stageNameIn(project, id)
   const ask = (group: PendingGroup, item: PendingItem): void => {
     const where = [stageName(item.stage), item.station].filter(part => part !== undefined).join(' ')
     const lead = `${item.id ?? ''}${where === '' ? '' : t('pending.where', { where })}`
     const label = lead === '' ? itemText(item, t) : `${lead} ${itemText(item, t)}`
-    const result = onAsk(t(`pending.starter.${group}`, { project: projectName, item: label }))
+    const result = onAsk(t(`pending.starter.${group}`, { project: project.name, item: label }))
     setNotice(result === 'sent' ? t('pending.sent') : t(result === 'busy' ? 'hero.busy' : 'hero.unavailable'))
   }
 
@@ -158,7 +163,7 @@ function PendingList({ items, projectName, onOpen, onAsk, t }: {
 }
 
 /** The project tab body. */
-export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list, ask, t }: ProjectBodyProps): ReactNode {
+export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list, ask, ensureCanvas, t }: ProjectBodyProps): ReactNode {
   const { tab } = useTabInfo()
   const { signal } = tab
   const cwd = useSessions(sessions => sessions.byId[sessionId]?.cwd)
@@ -169,6 +174,7 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [buildRead, setBuildRead] = useState<{ readonly path: string; readonly view: BuildView } | undefined>(undefined)
   const [tick, setTick] = useState(0)
+  const [canvasError, setCanvasError] = useState<string | undefined>(undefined)
   /** Counts per path with the file size they were read at; a size change rereads. */
   const evidenceCache = useRef(new Map<string, { readonly size: number | undefined; readonly counts: EvidenceCounts }>())
 
@@ -201,7 +207,7 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
   // List each stage directory of the current project and count evidence in its Markdown files.
   useEffect(() => {
     if (current?.project === undefined || signal.aborted) return
-    let cancelled = false
+    const run = { cancelled: false }
     const cache = evidenceCache.current
     const countFile = async (path: string, size: number | undefined): Promise<readonly [string, EvidenceCounts] | undefined> => {
       const cached = cache.get(path)
@@ -212,8 +218,9 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
       cache.set(path, { size, counts })
       return [path, counts]
     }
+    const stageMap = current.project.stages
     void (async () => {
-      const stages = await Promise.all(STAGES.map(async (stage) => {
+      const stages = await Promise.all(stageMap.map(async (stage) => {
         const result = await list(sessionId, joinPath(current.root, stage.dir), signal)
         const visible = result.ok
           ? result.value.filter(entry => entry.type === 'file' && isDeliverable(entry.name)).sort((a, b) => byName.compare(a.name, b.name))
@@ -222,14 +229,14 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
           .map(entry => countFile(joinPath(current.root, stage.dir, entry.name), entry.size)))
         return { id: stage.id, visible, counted }
       }))
-      if (cancelled) return
+      if (run.cancelled) return
       setFiles(Object.fromEntries(stages.map(stage => [stage.id, stage.visible])))
       setEvidence(Object.fromEntries(stages.flatMap(stage => stage.counted.filter(entry => entry !== undefined))))
     })()
-    return () => { cancelled = true }
+    return () => { run.cancelled = true }
   }, [current?.root, current?.project, sessionId, signal, readText, list, tick])
 
-  // Read a handed-off project's dev folder: its status file and latest evidence.
+  // Read the project's MVP code repository: its status file and latest evidence.
   const buildPath = current?.project?.build?.path
   useEffect(() => {
     if (buildPath === undefined || signal.aborted) return
@@ -267,6 +274,14 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
   }
 
   const openFile = (path: string): void => { tab.actions.openResource(fileAddressFor(sessionId, cwd, path)) }
+  const openCanvas = (): void => {
+    const path = joinPath(current.root, PROJECT_CANVAS)
+    setCanvasError(undefined)
+    void ensureCanvas(sessionId, path).then((error) => {
+      if (error === undefined) openFile(path)
+      else setCanvasError(t('canvas.createFailed', { message: error }))
+    })
+  }
   const project = current.project
   const isOpen = (stage: Stage): boolean => open[stage.id] ?? (stage.id === project?.currentStage || (files[stage.id]?.length ?? 0) > 0)
   const done = project?.stages.filter(stage => stage.status === 'done').length ?? 0
@@ -289,12 +304,19 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
             </select>
           )
           : <span className={css.projectName}>{project?.name ?? current.folder}</span>}
+        {project !== undefined && (
+          <Tooltip label={t('canvas.openHint')} side="bottom" delayMs={500}>
+            <button type="button" className={css.canvasButton} onClick={openCanvas}>{t('canvas.open')}</button>
+          </Tooltip>
+        )}
         <Tooltip label={t('refresh')} side="bottom" delayMs={500}>
           <button type="button" className={css.iconButton} aria-label={t('refresh')} onClick={refresh}>
             <IconRefreshOutlineRegular />
           </button>
         </Tooltip>
       </div>
+
+      {canvasError !== undefined && <div className={css.error}>{canvasError}</div>}
 
       {current.error !== undefined && (
         <div className={css.error}>{t('error.read', { path: joinPath(current.folder, 'aipm.json'), message: current.error })}</div>
@@ -337,7 +359,7 @@ export function ProjectBody({ useTabInfo, sessionId, useSessions, readText, list
         <PendingList
           key={current.root}
           items={pending}
-          projectName={project.name}
+          project={project}
           onOpen={(source) => { openFile(joinPath(current.root, source)) }}
           onAsk={text => ask(sessionId, text)}
           t={t}

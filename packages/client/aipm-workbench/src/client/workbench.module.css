@@ -73,6 +73,23 @@
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
+.canvasButton {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border: 0.5px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-sm, 6px);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.canvasButton:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
 /* ---------- summary card ---------- */
 
 .summary {

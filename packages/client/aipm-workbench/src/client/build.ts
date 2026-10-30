@@ -1,20 +1,21 @@
 /**
- * A handed-off project's progress in its dev folder, as the build card reads it.
+ * A project's MVP progress in its code repository, as the build card reads it.
  *
  * The coding agent keeps `docs/项目状态.md` and one evidence folder per build
  * stage (`docs/evidence/<阶段名>/` holding `是否表.md` and `verify-输出.txt`);
- * the line and table formats are fixed by the dev folder's rule card
- * (`AGENTS.md` sections 4, 5 and 8, written by the `build-launch` skill).
- * The workspace read endpoint reads absolute paths outside the Session's
- * workspace, so the card reads the files by their fixed names without listing
- * directories.
+ * the line and table formats are fixed by the repository's rule card
+ * (`AGENTS.md` sections 4, 5 and 8, installed by the `mvp-build` skill; dev
+ * folders from the earlier `build-launch` skill use the same formats). The
+ * repository normally sits inside the project, but an older dev folder can lie
+ * outside the workspace; the read endpoint accepts absolute paths there, so the
+ * card reads the files by their fixed names without listing directories.
  */
 import type { RemoteResult } from '@deepseek-ai/dsh-api-remotes/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { ProjectFiles } from './files.ts'
 import { joinPath } from './model.ts'
 
-/** Number of build stages: 0 PRD check through 5 wrap-up. */
+/** Number of build stages: 0 setup through 5 launch (0 PRD check through 5 wrap-up in a legacy dev folder). */
 export const BUILD_STAGE_COUNT = 6
 
 /** The current-stage lines of `docs/项目状态.md`. */

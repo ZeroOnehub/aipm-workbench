@@ -126,11 +126,12 @@ describe('readBuild', () => {
 describe('parseProject build', () => {
   it('keeps a build entry with a path and drops one without', () => {
     const parsed = parseProject(JSON.stringify({
+      version: 2,
       project: '微醺指南',
-      build: { path: PRODUCT, tool: 'Claude Code', stage: '2 后端 MVP', checked: '2026-10-26', extra: 1 },
+      build: { path: PRODUCT, tool: 'Claude Code', stage: '1 后端 MVP', checked: '2026-10-26', extra: 1 },
     }), '微醺指南')
     expect('error' in parsed ? undefined : parsed.build).toEqual({
-      path: PRODUCT, tool: 'Claude Code', handoff: undefined, synced: undefined, stage: '2 后端 MVP', checked: '2026-10-26',
+      path: PRODUCT, tool: 'Claude Code', handoff: undefined, synced: undefined, stage: '1 后端 MVP', checked: '2026-10-26', legacy: false,
     })
     const withoutPath = parseProject(JSON.stringify({ project: '微醺指南', build: { tool: 'Codex' } }), '微醺指南')
     expect('error' in withoutPath ? 'error' : withoutPath.build).toBeUndefined()

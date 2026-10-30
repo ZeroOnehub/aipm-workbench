@@ -1,7 +1,8 @@
 /**
- * The project tab's build card: where a handed-off project's code stands in its
- * dev folder — build stage, last stop, and the latest evidence package's gate
+ * The project tab's build card: where a project's MVP code stands in its code
+ * repository — build stage, last stop, and the latest evidence package's gate
  * table and verify.sh verdict — with a button that asks the hub about it.
+ * Dev folders from the earlier flow keep their own stage names.
  */
 import { useState } from 'react'
 import type { ReactNode } from 'react'
@@ -15,9 +16,14 @@ import css from './workbench.module.css'
 /** Problems listed under the gate line before the rest is cut. */
 const PROBLEM_LIMIT = 4
 
-/** Build stage names in stage-number order, one bar segment each. */
+/** MVP stage names in stage-number order, one bar segment each. */
 const STAGE_KEYS = [
   'build.stage.0', 'build.stage.1', 'build.stage.2', 'build.stage.3', 'build.stage.4', 'build.stage.5',
+] as const satisfies readonly AipmWorkbenchKey[]
+
+/** Stage names of a dev folder from the earlier flow. */
+const LEGACY_STAGE_KEYS = [
+  'build.legacyStage.0', 'build.legacyStage.1', 'build.legacyStage.2', 'build.legacyStage.3', 'build.legacyStage.4', 'build.legacyStage.5',
 ] as const satisfies readonly AipmWorkbenchKey[]
 
 /** The card's props. */
@@ -83,7 +89,7 @@ export function BuildCard({ build, view, projectName, onAsk, onOpenStatus, t }: 
       {status !== undefined && (
         <>
           <div className={css.pipeline} aria-hidden="true">
-            {STAGE_KEYS.map((key, index) => {
+            {(build.legacy ? LEGACY_STAGE_KEYS : STAGE_KEYS).map((key, index) => {
               const current = status.stageIndex
               const state = current === undefined ? '' : index < current ? css.pipe_done : index === current ? `${css.pipe_in_progress} ${css.pipeCurrent}` : ''
               return <span key={key} className={`${css.pipeSeg} ${state ?? ''}`} title={t(key)} />

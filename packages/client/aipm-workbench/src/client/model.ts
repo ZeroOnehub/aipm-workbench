@@ -2,9 +2,10 @@
  * The project file contract the AIPM skills write and the project tab reads.
  *
  * `aipm.json` sits at a project's root; the format is owned by the `aipm-hub`
- * skill (references/aipm-json.md). Parsing here is forgiving: unknown fields are
- * dropped, missing stages fall back to the fixed six-stage map, so a half-written
- * file still draws a sensible panel.
+ * skill (references/aipm-json.md). Version 2 files use the current six stages;
+ * older files keep the earlier six until the hub upgrades them. Parsing here is
+ * forgiving: unknown fields are dropped, missing stages fall back to the fixed
+ * stage map, so a half-written file still draws a sensible panel.
  */
 
 /** Stage status as the skills record it. */
@@ -27,45 +28,82 @@ export interface StageDefinition {
   readonly starter: string
 }
 
-/** The six stages, in flow order. */
+const INITIATION: StageDefinition = {
+  id: 'initiation', name: '立项', dir: '01-立项',
+  skills: ['project-initiation'],
+  output: '立项报告：做不做、先做多小',
+  starter: '/aipm-hub 新建项目。我想做的产品是：',
+}
+
+const PRD: StageDefinition = {
+  id: 'prd', name: 'PRD', dir: '02-PRD',
+  skills: ['prd'],
+  output: 'PRD：功能、交互、提示词、评测需求',
+  starter: '/aipm-hub 继续项目，进入 PRD',
+}
+
+const PROTOTYPE: StageDefinition = {
+  id: 'prototype', name: '原型交互', dir: '03-原型交互',
+  skills: ['prototype'],
+  output: '线框图和可点击原型',
+  starter: '/aipm-hub 继续项目，进入原型交互',
+}
+
+/** The six stages of the current flow (`aipm.json` version 2), in flow order. */
 export const STAGES: readonly StageDefinition[] = [
+  INITIATION,
+  PRD,
+  PROTOTYPE,
   {
-    id: 'initiation', name: '立项', dir: '01-立项',
-    skills: ['project-initiation', 'interview-script', 'research-synthesis', 'code-check'],
-    output: '立项报告：做不做、先做多小',
-    starter: '/aipm-hub 新建项目。我想做的产品是：',
+    id: 'tech', name: '技术方案', dir: '04-技术方案',
+    skills: ['tech-solution'],
+    output: 'PRD 体检、技术选型、架构方案',
+    starter: '/aipm-hub 继续项目，进入技术方案',
   },
   {
-    id: 'prd', name: 'PRD', dir: '02-PRD',
-    skills: ['prd', 'prd-review'],
-    output: 'PRD：功能、验收标准、AI 能力边界',
-    starter: '/aipm-hub 继续项目，进入 PRD 阶段',
+    id: 'model-eval', name: '模型评测', dir: '05-模型评测',
+    skills: ['model-eval'],
+    output: '候选模型、评测集、选型结论',
+    starter: '/aipm-hub 继续项目，进入模型选型与评测',
   },
   {
-    id: 'prototype', name: '原型交互', dir: '03-原型交互',
-    skills: ['html-wireframe', 'html-prototype'],
-    output: '线框图和可交互原型',
-    starter: '/aipm-hub 继续项目，进入原型交互阶段',
+    id: 'mvp', name: 'MVP', dir: '06-MVP',
+    skills: ['mvp-build'],
+    output: '能跑的 MVP 和验收报告',
+    starter: '/aipm-hub 继续项目，开始做 MVP',
   },
+]
+
+/**
+ * The six stages of the earlier flow, for `aipm.json` files without version 2.
+ * The hub offers to upgrade such projects; until then they keep their stages.
+ */
+export const LEGACY_STAGES: readonly StageDefinition[] = [
+  INITIATION,
+  PRD,
+  PROTOTYPE,
   {
     id: 'ai-design', name: 'AI 方案设计', dir: '04-AI方案设计',
-    skills: ['agent-architecture', 'system-prompt-design', 'build-launch', 'harness-patterns'],
-    output: '架构方案、系统提示词、研发交接包和开发文件夹',
-    starter: '/aipm-hub 继续项目，进入 AI 方案设计阶段',
+    skills: ['aipm-hub'],
+    output: '旧流程：架构方案、系统提示词',
+    starter: '/aipm-hub 继续项目',
   },
   {
     id: 'evaluation', name: '评测', dir: '05-评测',
-    skills: ['eval-error-analysis', 'code-check', 'eval-judge-prompt', 'eval-validate-judge'],
-    output: '可行性小样、对照验收、错误分析、评委校准',
-    starter: '/aipm-hub 继续项目，进入评测阶段',
+    skills: ['aipm-hub'],
+    output: '旧流程：可行性小样、评测',
+    starter: '/aipm-hub 继续项目',
   },
   {
     id: 'launch-review', name: '上线复盘', dir: '06-上线复盘',
-    skills: ['build-launch', 'metrics-review', 'retro'],
-    output: '上线检查、指标复盘、下一轮结论',
-    starter: '/aipm-hub 继续项目，进入上线复盘阶段',
+    skills: ['aipm-hub'],
+    output: '旧流程：上线检查、复盘',
+    starter: '/aipm-hub 继续项目',
   },
 ]
+
+/** The `aipm.json` version written by the current skills. */
+export const CURRENT_VERSION = 2
 
 /** One station row. */
 export interface Station {
@@ -139,11 +177,18 @@ export interface BuildInfo {
   readonly stage?: string | undefined
   /** Date of that read. */
   readonly checked?: string | undefined
+  /**
+   * Whether the folder follows the earlier dev-folder stages (0 PRD check through
+   * 5 wrap-up) rather than the MVP stages (0 setup through 5 launch).
+   */
+  readonly legacy: boolean
 }
 
 /** A parsed project. */
 export interface Project {
   readonly name: string
+  /** Whether the file predates version 2 and uses {@link LEGACY_STAGES}. */
+  readonly legacy: boolean
   readonly type?: string | undefined
   readonly updated?: string | undefined
   readonly currentStage?: string | undefined
@@ -185,8 +230,9 @@ export function parseProject(raw: string, folder: string): Project | { error: st
   }
   const root = record(data)
   if (root === undefined) return { error: 'aipm.json 顶层应当是一个对象' }
+  const legacy = root.version !== CURRENT_VERSION
   const listed = Array.isArray(root.stages) ? root.stages.map(record).filter(s => s !== undefined) : []
-  const stages = STAGES.map((definition): Stage => {
+  const stages = (legacy ? LEGACY_STAGES : STAGES).map((definition): Stage => {
     const found = listed.find(s => s.id === definition.id)
     const stations = Array.isArray(found?.stations)
       ? found.stations.map(record).filter(s => s !== undefined).map((s, index): Station => ({
@@ -219,6 +265,7 @@ export function parseProject(raw: string, folder: string): Project | { error: st
   const buildPath = text(build?.path)
   return {
     name: text(root.project) ?? folder,
+    legacy,
     ...(text(root.type) === undefined ? {} : { type: text(root.type) }),
     ...(text(root.updated) === undefined ? {} : { updated: text(root.updated) }),
     ...(text(root.currentStage) === undefined ? {} : { currentStage: text(root.currentStage) }),
@@ -234,6 +281,7 @@ export function parseProject(raw: string, folder: string): Project | { error: st
           synced: text(build?.synced),
           stage: text(build?.stage),
           checked: text(build?.checked),
+          legacy: legacy || build?.legacy === true,
         },
       }),
   }
@@ -264,6 +312,16 @@ export function openItems(project: Project): PendingItem[] {
     }
   }
   return [...project.pending, ...derived]
+}
+
+/**
+ * The name of a stage id in a project's own stage map.
+ * @param project - parsed project.
+ * @param id - stage id, as `currentStage` or a pending item's `stage` records it.
+ * @returns the stage name, or `undefined` for an unknown id.
+ */
+export function stageNameIn(project: Project, id: string | undefined): string | undefined {
+  return project.stages.find(stage => stage.id === id)?.name
 }
 
 /**

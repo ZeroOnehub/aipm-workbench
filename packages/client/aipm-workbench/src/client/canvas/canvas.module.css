@@ -1,0 +1,508 @@
+/* Idea canvas tab. Surfaces come from the app's alias tokens so light and dark
+   themes both read; the six JSON Canvas color presets are fixed accents mixed
+   into the surface. */
+
+.root {
+  --canvas-c1: #e5484d;
+  --canvas-c2: #f76b15;
+  --canvas-c3: #e2a336;
+  --canvas-c4: #30a46c;
+  --canvas-c5: #0fa1b5;
+  --canvas-c6: #8e4ec6;
+  --canvas-accent: var(--dsw-alias-state-business-primary, #2764f2);
+  --node-color: var(--dsw-alias-border-l1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  outline: none;
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  font-size: var(--dsh-content-font-size-secondary, 13px);
+}
+
+/* ---------- toolbar ---------- */
+
+.toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 38px;
+  padding: 4px 10px 4px 16px;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l3);
+}
+
+.fileName {
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clean,
+.dirty {
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+.clean {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.dirty {
+  color: var(--canvas-accent);
+}
+
+.divider {
+  width: 0.5px;
+  height: 16px;
+  background: var(--dsw-alias-border-l2);
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.tool,
+.primary,
+.danger,
+.zoomValue {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border: 0.5px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-sm, 6px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tool:hover,
+.zoomValue:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.tool:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.primary {
+  border-color: transparent;
+  background: var(--canvas-accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.primary:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.danger {
+  border-color: var(--dsw-alias-state-error-primary);
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.zoom {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.zoomValue {
+  min-width: 52px;
+  font-variant-numeric: tabular-nums;
+}
+
+.swatches {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.swatch {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1.5px solid var(--dsw-alias-bg-base);
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--node-color);
+  box-shadow: 0 0 0 0.5px var(--dsw-alias-border-l1);
+  cursor: pointer;
+}
+
+.swatchNone {
+  background: linear-gradient(135deg, transparent 45%, var(--dsw-alias-state-error-primary) 45% 55%, transparent 55%), var(--dsw-alias-bg-base);
+}
+
+/* ---------- bars under the toolbar ---------- */
+
+.draft {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 8px 12px 0;
+}
+
+.draftInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 9px;
+  border: 0.5px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-sm, 6px);
+  background: var(--dsw-alias-bg-base);
+  color: inherit;
+  font: inherit;
+}
+
+.conflict,
+.notice,
+.noticeError {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+  margin: 8px 12px 0;
+  padding: 8px 12px;
+  border-radius: var(--dsw-radius-md, 10px);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.conflict {
+  border-left: 3px solid var(--dsw-alias-state-error-primary);
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 8%, transparent);
+}
+
+.conflictActions {
+  display: flex;
+  gap: 8px;
+}
+
+.notice {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.noticeError {
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 8%, transparent);
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.status {
+  padding: 24px 16px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* ---------- board ---------- */
+
+.viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background-color: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base));
+  background-image: radial-gradient(circle, var(--dsw-alias-border-l2) 1px, transparent 1.2px);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.viewport:active {
+  cursor: grabbing;
+}
+
+.world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.empty {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  width: min(420px, 80%);
+  color: var(--dsw-alias-label-secondary);
+  line-height: 1.6;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.emptyTitle {
+  margin: 0 0 6px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+/* ---------- nodes ---------- */
+
+.node {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-md, 10px);
+  background: var(--dsw-alias-bg-base);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+  cursor: default;
+}
+
+.colored {
+  border-color: var(--node-color);
+  background: color-mix(in srgb, var(--node-color) 10%, var(--dsw-alias-bg-base));
+}
+
+.selected {
+  outline: 2px solid var(--canvas-accent);
+  outline-offset: 1px;
+}
+
+.noteBody {
+  height: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  overflow: hidden;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.noteHeading {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.noteBullet {
+  padding-left: 12px;
+  text-indent: -12px;
+}
+
+.noteBullet::before {
+  content: '· ';
+}
+
+.noteBlank {
+  height: 0.6em;
+}
+
+.muted {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.textInput,
+.labelInput {
+  box-sizing: border-box;
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  resize: none;
+}
+
+.textInput {
+  height: 100%;
+  padding: 10px 12px;
+  line-height: 1.55;
+}
+
+.labelInput {
+  height: 24px;
+  padding: 0;
+  font-weight: 650;
+}
+
+.node_link .linkBody {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 10px 36px 10px 12px;
+  border-left: 3px solid var(--canvas-accent);
+}
+
+.linkHost {
+  font-weight: 650;
+}
+
+.linkRest {
+  overflow: hidden;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.linkOpen {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--dsw-radius-sm, 6px);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+
+.linkOpen:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.docBody {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+}
+
+.docTitle {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.docPreview {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 6px;
+  overflow: hidden;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.docHint {
+  margin-top: 6px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11.5px;
+}
+
+/* ---------- groups ---------- */
+
+.group {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1.5px dashed var(--node-color);
+  border-radius: var(--dsw-radius-md, 10px);
+  background: color-mix(in srgb, var(--node-color) 6%, transparent);
+  pointer-events: none;
+}
+
+.groupLabel {
+  position: absolute;
+  top: -30px;
+  left: 0;
+  max-width: 100%;
+  padding: 3px 10px;
+  overflow: hidden;
+  border-radius: var(--dsw-radius-sm, 6px);
+  background: color-mix(in srgb, var(--node-color) 16%, var(--dsw-alias-bg-base));
+  font-size: 14px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: move;
+  pointer-events: auto;
+}
+
+/* ---------- edges ---------- */
+
+.edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+}
+
+.edgeLine {
+  fill: none;
+  stroke: var(--dsw-alias-label-tertiary);
+  stroke-width: 2;
+}
+
+.edgeColored .edgeLine {
+  stroke: var(--node-color);
+}
+
+.edgeSelected .edgeLine {
+  stroke: var(--canvas-accent);
+}
+
+.edgeHit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  cursor: pointer;
+}
+
+.arrow {
+  fill: var(--dsw-alias-label-tertiary);
+}
+
+.edgeLabel {
+  fill: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--dsw-alias-bg-base);
+  stroke-width: 4px;
+}
+
+.edgeDraft {
+  fill: none;
+  stroke: var(--canvas-accent);
+  stroke-dasharray: 6 4;
+  stroke-width: 2;
+}
+
+/* ---------- handles ---------- */
+
+.resizeHandle,
+.connectHandle {
+  position: absolute;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 2px solid var(--canvas-accent);
+  background: var(--dsw-alias-bg-base);
+}
+
+.resizeHandle {
+  border-radius: var(--dsw-radius-sm, 4px);
+  cursor: nwse-resize;
+}
+
+.connectHandle {
+  margin-left: 4px;
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--canvas-accent);
+  cursor: crosshair;
+}

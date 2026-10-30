@@ -1,8 +1,9 @@
 /**
  * The blank-session Hero footer. Projects already in the workspace come first,
  * each with what waits for the user, so a returning user resumes work instead
- * of starting a stage. Below them the six stages are starter cards: clicking
- * one puts that stage's hub command into the composer.
+ * of starting a stage. The idea canvas entry follows: it opens the workspace
+ * canvas, creating it on first use. Below it the six stages are starter cards:
+ * clicking one puts that stage's hub command into the composer.
  */
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -10,7 +11,7 @@ import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { discoverProjects } from './files.ts'
 import type { ProjectFiles } from './files.ts'
-import { PENDING_GROUPS, STAGES, openItems, pendingGroupOf } from './model.ts'
+import { PENDING_GROUPS, STAGES, openItems, pendingGroupOf, stageNameIn } from './model.ts'
 import type { PendingGroup, Project } from './model.ts'
 import type {} from './locales.ts'
 import css from './hero.module.css'
@@ -24,6 +25,13 @@ export interface HeroInjected extends ProjectFiles {
   start: (sessionId: SessionId, text: string) => StarterResult
   /** Open the project tab in the right Sidebar of the on-screen Session. */
   openProjects: () => void
+  /**
+   * Open the workspace's idea canvas, creating an empty one first when missing.
+   * @param sessionId - the on-screen Session.
+   * @param cwd - its workspace directory.
+   * @returns an error message, or `undefined` once the canvas is open.
+   */
+  openCanvas: (sessionId: SessionId, cwd: string) => Promise<string | undefined>
 }
 
 /** The footer's composed props. */
@@ -43,7 +51,8 @@ function pendingCounts(project: Project): Record<PendingGroup, number> {
 }
 
 /** The Hero footer: recent projects with their open items, then the six-stage starter grid. */
-export function HeroStages({ sessionId, disabled, start, openProjects, readText, list, useSessions, t }: HeroStagesProps): ReactNode {
+export function HeroStages(props: HeroStagesProps): ReactNode {
+  const { sessionId, disabled, start, openProjects, openCanvas, readText, list, useSessions, t } = props
   const [notice, setNotice] = useState<string | undefined>(undefined)
   const [projects, setProjects] = useState<readonly Project[]>([])
   const cwd = useSessions(sessions => sessionId === undefined ? undefined : sessions.byId[sessionId]?.cwd)
@@ -68,6 +77,14 @@ export function HeroStages({ sessionId, disabled, start, openProjects, readText,
     setNotice(result === 'sent' ? undefined : t(result === 'busy' ? 'hero.busy' : 'hero.unavailable'))
   }
 
+  const canvas = (): void => {
+    if (sessionId === undefined || cwd === undefined) return
+    setNotice(undefined)
+    void openCanvas(sessionId, cwd).then((error) => {
+      if (error !== undefined) setNotice(t('hero.canvasFailed', { message: error }))
+    })
+  }
+
   return (
     <section className={css.hero} aria-label={t('hero.label')}>
       {projects.length > 0 && (
@@ -80,7 +97,7 @@ export function HeroStages({ sessionId, disabled, start, openProjects, readText,
           <ul className={css.projects}>
             {projects.map((project) => {
               const counts = pendingCounts(project)
-              const stage = STAGES.find(definition => definition.id === project.currentStage)
+              const stage = stageNameIn(project, project.currentStage)
               return (
                 <li key={project.name}>
                   <button
@@ -90,7 +107,7 @@ export function HeroStages({ sessionId, disabled, start, openProjects, readText,
                     onClick={() => { put(t('hero.continueStarter', { project: project.name })) }}
                   >
                     <span className={css.projectName}>{project.name}</span>
-                    {stage !== undefined && <span className={css.projectStage}>{t('summary.current', { stage: stage.name })}</span>}
+                    {stage !== undefined && <span className={css.projectStage}>{t('summary.current', { stage })}</span>}
                     <span className={css.counts}>
                       {PENDING_GROUPS.filter(group => counts[group] > 0).map(group => (
                         <span key={group} className={`${css.count} ${css[`count_${group}`] ?? ''}`}>
@@ -106,7 +123,11 @@ export function HeroStages({ sessionId, disabled, start, openProjects, readText,
           </ul>
         </>
       )}
-      <div className={`${css.head} ${projects.length > 0 ? css.headSpaced : ''}`}>
+      <button type="button" className={`${css.canvas} ${projects.length > 0 ? css.canvasSpaced : ''}`} disabled={!ready || cwd === undefined} onClick={canvas}>
+        <span className={css.canvasName}>{t('hero.canvas')}</span>
+        <span className={css.canvasHint}>{t('hero.canvasHint')}</span>
+      </button>
+      <div className={`${css.head} ${css.headSpaced}`}>
         <span className={css.kicker}>{t('hero.kicker')}</span>
         <span className={css.hint}>{notice ?? (ready ? t('hero.hint') : t('hero.needWorkspace'))}</span>
       </div>

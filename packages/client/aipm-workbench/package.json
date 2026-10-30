@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-client-aipm-workbench",
-  "description": "AIPM 工坊: brand occupants and the right-Sidebar project tab showing stage progress and deliverables",
+  "description": "拾阶: brand occupants, the idea canvas, and the right-Sidebar project tab showing stage progress and deliverables",
   "version": "0.2.1-alpha.1",
   "private": true,
   "type": "module",
